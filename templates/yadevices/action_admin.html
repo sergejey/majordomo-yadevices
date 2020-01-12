@@ -1,0 +1,80 @@
+
+<div class="row">
+ <div class="col-md-6">
+  [ <a href="#" onClick="$('#api_settings').toggle();return false;"><#LANG_SETUP#></a> ]
+ </div>
+ [#if VIEW_MODE=""#]
+ <div class="col-md-6">
+  Auth status:
+  [#if LOGIN_STATUS="1"#]
+  <font color="green">OK</font>
+  [#else#]
+  <font color="red">N/A</font>
+  [#endif#]
+ </div>
+ [#endif VIEW_MODE#]
+</div>
+
+<div style="display:none" id='api_settings'>
+&nbsp;
+<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+<fieldset>
+<div class="form-group">
+ <label class="control-label"[#if ERR_API_USERNAME#] style="color:red;font-weight:bold"[#endif#]>
+ Yandex Username:
+ </label>
+ <div class="controls"><input type="text" name="api_username" value="[#API_USERNAME#]" class="input"></div>
+</div>
+<div class="form-group">
+ <label class="control-label"[#if ERR_API_PASSWORD#] style="color:red;font-weight:bold"[#endif#]>
+ Yandex Password:
+ </label>
+ <div class="controls"><input type="password" name="api_password" value="[#API_PASSWORD#]" class="input"></div>
+</div>
+<div class="form-actions">
+<button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_UPDATE#></button>
+<input type="hidden" name="view_mode" value="update_settings">
+<input type="hidden" name="mode" value="update">
+</div>
+</fieldset>
+</form>
+</div>
+
+[#if VIEW_MODE="" || VIEW_MODE="search_yastations" || VIEW_MODE="search_yadevices"#]
+&nbsp;
+<div>
+ <a href="?mode=refresh" class="btn btn-default"><i class="glyphicon glyphicon-refresh"></i> <#LANG_REFRESH#></a>
+</div>
+&nbsp;
+
+<ul class="nav nav-tabs">
+ <li[#if VIEW_MODE="" || VIEW_MODE="search_yastations"#] class="active"[#endif#]><a href="?view_mode=">Stations</a></li>
+ <li[#if VIEW_MODE="search_yadevices"#] class="active"[#endif#]><a href="?view_mode=search_yadevices">Devices</a></li>
+</ul>
+&nbsp;
+[#endif VIEW_MODE#]
+
+ [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
+  [#inc yastations_search_admin.html#]
+ [#endif VIEW_MODE#]
+
+[#if VIEW_MODE="search_yadevices"#]
+[#inc yadevices_search_admin.html#]
+[#endif VIEW_MODE#]
+
+ <!-- / table yastations search -->
+ <!-- table yastations edit -->
+ [#if VIEW_MODE="edit_yastations"#]
+   [#inc yastations_edit.html#]
+ [#endif VIEW_MODE#]
+
+[#if VIEW_MODE="edit_yadevices"#]
+[#inc yadevices_edit.html#]
+[#endif VIEW_MODE#]
+
+ <!-- / table yastations edit -->
+ <!-- table yastations view --> 
+ [#if VIEW_MODE="view_yastations"#]
+   [#inc yastations_view.html#]
+ [#endif VIEW_MODE#]
+ <!-- / table yastations view -->

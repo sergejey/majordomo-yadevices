@@ -1,0 +1,23 @@
+<h2>[#TITLE#]</h2>
+<b>[#IOT_ID#]</b>
+<hr>
+<form class="form">
+    <div class="form-group">
+        <table class="table">
+            [#begin CAPABILITIES#]
+            <tr>
+                <td>[#TITLE#]</td>
+                <td>[#VALUE#]</td>
+                <td>[#UPDATED#]</td>
+            </tr>
+            [#end CAPABILITIES#]
+        </table>
+    </div>
+    <div class="form-group">
+        <input type="submit" class="btn btn-default btn-primary" value="<#LANG_SUBMIT#>">
+        <a href="?view_mode=search_yadevices" class="btn btn-default"><#LANG_CANCEL#></a>
+    </div>
+    <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+    <input type="hidden" name="id" value="<#ID#>">
+    <input type="hidden" name="mode" value="update">
+</form>
