@@ -367,6 +367,7 @@ class yadevices extends module
         if (preg_match('/access_token=(\w+)/is',$result,$m)) {
             $oauth_token = $m[1];
         } else {
+            echo $result;exit;
             return false;
         }
 
