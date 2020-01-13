@@ -349,14 +349,11 @@ class yadevices extends module
     function getDeviceToken($device_id, $platform) {
 
         // getAuth token
-        /*
-         *CLIENT_ID = '23cabbbdc6cd418abb4b39c32c41195d'
-          CLIENT_SECRET = '53bc75238f0c4d08a118e51fe9203300'
-         */
-        $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=".'23cabbbdc6cd418abb4b39c32c41195d';
+        $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
+        $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=".$ya_music_client_id;
 
         $YaCurl = curl_init();
-        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, false);
+        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
         curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
@@ -364,7 +361,7 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_POST, false);
         $result = curl_exec($YaCurl);
 
-        if (preg_match('/access_token=(\w+)/is',$result,$m)) {
+        if (preg_match('/^Found.*access_token=([^<]+?)&/is',$result,$m)) {
             $oauth_token = $m[1];
         } else {
             echo $result;exit;
