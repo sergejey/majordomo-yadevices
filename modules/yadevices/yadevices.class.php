@@ -273,11 +273,18 @@ class yadevices extends module
 
     function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0) {
         $this->getConfig();
-        $token = $this->config['API_TOKEN'];
+        $token = $this->getToken();
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
+
+        if (preg_match('/devices\/(.+)\/actions/',$url,$m)) {
+            $referer = "https://quasar.yandex.ru/skills/iot/device/".$m[1]."?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920//Referer: https://quasar.yandex.ru/skills/iot/device/8f5ccea3-d631-4cfb-9fea-5cc36abba92e?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920";
+            dprint($referer);
+            curl_setopt($YaCurl,CURLOPT_REFERER,$referer);
+        }
+
         if ($method != 'POST') {
             curl_setopt($YaCurl, CURLOPT_POST, false);
         } else {
@@ -286,7 +293,9 @@ class yadevices extends module
             curl_setopt($YaCurl, CURLOPT_HTTPHEADER, array('x-csrf-token:'.$token));
         }
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        $data = json_decode(curl_exec($YaCurl), true);
+        $result = curl_exec($YaCurl);
+        dprint($result,false);
+        $data = json_decode($result, true);
         if (!$repeating && (!is_array($data) || $data['status']=='error')) {
             $token = $this->getToken();
             if ($token) {
@@ -446,6 +455,7 @@ class yadevices extends module
     }
 
     function sendDataToStation($command, $token, $ip, $port = 1961) {
+        DebMes("Sending '$command' to $ip",'yadevices');
         $clientConfig = new ClientConfig();
         $clientConfig->setHeaders([
             'X-Origin' => 'http://yandex.ru/',
@@ -503,13 +513,51 @@ class yadevices extends module
     {
         $this->getConfig();
         if ($event == 'SAY') {
-            $level = $details['level'];
+            $level = (int)$details['level'];
             $message = $details['message'];
             //...
-            $stations = SQLSelect("SELECT ID FROM yastations WHERE TTS=1 AND MIN_LEVEL<=".(int)$level);
+            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=1");
             foreach($stations as $station) {
-                $this->sendCommandToStation($station['ID'],'повтори за мной '.$message);
+                $min_level = 0;
+                if ($station['MIN_LEVEL_TEXT']!='') {
+                    $min_level = processTitle($station['MIN_LEVEL_TEXT']);
+                } elseif ($station['MIN_LEVEL']) {
+                    $min_level = $station['MIN_LEVEL'];
+                }
+                if ($level>=$min_level) {
+                    $this->sendCommandToStation($station['ID'],'повтори за мной '.$message);
+                }
             }
+        }
+    }
+
+    function sendValueToYandex($iot_id, $command_type, $value) {
+        $url = "https://iot.quasar.yandex.ru/m/user/devices/".$iot_id."/actions";
+        if ($command_type=='devices.capabilities.on_off') {
+            if ($value) {
+                $value = true;
+            } else {
+                $value = false;
+            }
+            $data = array('actions'=>array(
+                array('state'=>array('instance'=>'on','value'=>$value),
+                    'type'=>$command_type
+            )));
+            //dprint($data);
+            dprint($url,false);
+            dprint(json_encode($data),false);
+            $result = $this->apiRequest($url,'POST',$data);
+            dprint($result,false);
+                //https://iot.quasar.yandex.ru/m/user/devices/<iot_id>/actions
+                //{"JSON":{"actions":[{"state":{"instance":"on","value":true},"type":"devices.capabilities.on_off"}]}}
+        }
+    }
+
+    function propertySetHandle($object, $property, $value) {
+        $properties = SQLSelect("SELECT yadevices_capabilities.*, yadevices.IOT_ID FROM yadevices_capabilities LEFT JOIN yadevices ON yadevices_capabilities.DEVICE_ID=yadevices.ID WHERE yadevices_capabilities.LINKED_OBJECT LIKE '" . DBSafe($object) . "' AND yadevices_capabilities.LINKED_PROPERTY LIKE '" . DBSafe($property) . "'");
+        $total = count($properties);
+        for($i=0;$i<$total;$i++) {
+            $this->sendValueToYandex($properties[$i]['IOT_ID'],$properties[$i]['TITLE'],$value);
         }
     }
 
@@ -556,7 +604,7 @@ class yadevices extends module
  yastations: TITLE varchar(255) NOT NULL DEFAULT ''
  yastations: STATION_ID varchar(100) NOT NULL DEFAULT ''
  yastations: IP varchar(100) NOT NULL DEFAULT ''
- yastations: MIN_LEVEL int(3) NOT NULL DEFAULT '0'
+ yastations: MIN_LEVEL_TEXT varchar(255) NOT NULL DEFAULT ''
  yastations: TTS int(3) NOT NULL DEFAULT '0'
  yastations: IOT_ID varchar(255) NOT NULL DEFAULT ''
  yastations: PLATFORM varchar(100) NOT NULL DEFAULT ''
@@ -577,6 +625,8 @@ class yadevices extends module
  yadevices_capabilities: YADEVICE_ID int(10) NOT NULL DEFAULT '0'
  yadevices_capabilities: TITLE varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: VALUE varchar(100) NOT NULL DEFAULT ''
+ yadevices_capabilities: LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
+ yadevices_capabilities: LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: UPDATED datetime
  
 EOD;

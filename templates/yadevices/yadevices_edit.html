@@ -4,13 +4,34 @@
 <form class="form">
     <div class="form-group">
         <table class="table">
-            [#begin CAPABILITIES#]
+            [#begin PROPERTIES#]
             <tr>
                 <td>[#TITLE#]</td>
                 <td>[#VALUE#]</td>
+                [#if CAN_LINK="1"#]
+                <td valign="top">
+                    [#if SDEVICE_TYPE!=""#]
+                    [#module name="devices" action="link" type="<#PROPERTIES.SDEVICE_TYPE#>" prefix="Ya" source_table="yadevices_capabilities" source_table_id="<#PROPERTIES.ID#>" linked_object="<#PROPERTIES.LINKED_OBJECT#>"#]
+                    [#else#]
+                    &nbsp;
+                    [#endif#]
+                </td>
+                <td><input type="text" name="linked_object[#ID#]" id="linked_object[#ID#]" value="[#LINKED_OBJECT#]">
+                    <input type="text" name="linked_property[#ID#]" id="linked_property[#ID#]" value="[#LINKED_PROPERTY#]">
+                </td>
+                [#module name="linkedobject" object_field="linked_object<#PROPERTIES.ID#>" property_field="linked_property<#PROPERTIES.ID#>" method_field="linked_method<#PROPERTIES.ID#>" width="200"#]
+                <td>
+                    [#if TITLE="devices.capabilities.on_off"#]
+                    <a href="?id=<#ID#>&view_mode=<#VIEW_MODE#>&property_id=[#ID#]&send_value=1" class="btn btn-default"><#LANG_ON#></a>
+                    <a href="?id=<#ID#>&view_mode=<#VIEW_MODE#>&property_id=[#ID#]&send_value=0" class="btn btn-default"><#LANG_OFF#></a>
+                    [#endif#]
+                </td>
+                [#else#]
+                <td colspan="2">&nbsp;</td>
+                [#endif#]
                 <td>[#UPDATED#]</td>
             </tr>
-            [#end CAPABILITIES#]
+            [#end PROPERTIES#]
         </table>
     </div>
     <div class="form-group">

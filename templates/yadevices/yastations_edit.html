@@ -13,54 +13,57 @@
 [#endif ID#]
 <!-- TITLE (varchar) -->
 <div class="form-group[#if ERR_TITLE#] has-error[#endif#]">
- <label for="title" class="col-lg-3 control-label">
+ <label for="title" class="col-md-6 control-label">
  Station ID:
  (*)
  </label>
- <div class="col-lg-9">
+ <div class="col-md-6">
   <input id="station_id" name="station_id" value="[#STATION_ID#]" disabled type="text" class="form-control"></div>
 </div>
 
  [#if DEVICE_TOKEN!=""#]
  <div class="form-group">
-  <label for="device_token" class="col-lg-3 control-label">
+  <label for="device_token" class="col-md-6 control-label">
    Device token:
   </label>
-  <div class="col-lg-9">
+  <div class="col-md-6">
    <input id="device_token" name="device_token" value="[#DEVICE_TOKEN#]" disabled type="text" class="form-control">
   </div>
  </div>
  [#endif#]
 
  <div class="form-group[#if ERR_IP#] has-error[#endif#]">
-  <label for="ip" class="col-lg-3 control-label">
+  <label for="ip" class="col-md-6 control-label">
    IP:
   </label>
-  <div class="col-lg-9">
+  <div class="col-md-6">
    <input id="ip" name="ip" value="[#IP#]" type="text" class="form-control"></div>
  </div>
 
+ [#if PLATFORM="yandexstation"#]
  <div class="form-group">
-  <label for="tts" class="col-lg-3 control-label">
-   TTS:
+  <label for="tts" class="col-md-6 control-label">
+   <#LANG_CAN_TTS#>:
   </label>
-  <div class="col-lg-9">
+  <div class="col-md-6">
    <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#]> <#LANG_YES#>
    <input type="radio" name="tts" value="0"[#if TTS!="1"#] checked[#endif#]> <#LANG_NO#>
    </div>
  </div>
 
-  <div class="form-group[#if ERR_MIN_LEVEL#] has-error[#endif#]">
-   <label for="min_level" class="col-lg-3 control-label">
-    Min msg level for TTS:
+  <div class="form-group[#if ERR_MIN_LEVEL_TEXT#] has-error[#endif#]">
+   <label for="min_level_text" class="col-md-6 control-label">
+    <#LANG_MIN_MSG_LEVEL#>:
    </label>
-   <div class="col-lg-9">
-    <input id="min_level" name="min_level" value="[#MIN_LEVEL#]" type="text" class="form-control">
+   <div class="col-md-6">
+    <input id="min_level_text" name="min_level_text" value="[#MIN_LEVEL_TEXT#]" type="text" class="form-control">
+    <span class="help-block"><#LANG_EXAMPLE#>: <i>%ThisComputer.minMsgLevel%</i></span>
    </div>
   </div>
+ [#endif PLATFORM#]
 
 <div class="form-group">
-        <div class="col-lg-offset-2">
+        <div class="col-md-offset-2">
  [#if ID!=""#]
  <button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_SUBMIT#></button>
  [#else ID#]
@@ -76,15 +79,15 @@
 </fieldset>
 </form>
 
-[#if ID!=""#]
+[#if ID!="" && PLATFORM="yandexstation"#]
 <hr>
 <form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-inline">
  <fieldset>
   <div class="form-group">
-   <label for="text" class="col-lg-3 control-label">
+   <label for="text" class="col-md-6 control-label">
     Command:
    </label>
-   <div class="col-lg-9">
+   <div class="col-md-6">
     <input id="text" name="text" value="[#TEXT#]" placeholder="command" type="text" class="form-control"></div>
   </div>
 

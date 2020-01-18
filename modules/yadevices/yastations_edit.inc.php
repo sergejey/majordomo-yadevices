@@ -34,7 +34,7 @@ if ($this->mode == 'update') {
 
     $rec['IP'] = gr('ip');
     $rec['TTS'] = gr('tts', 'int');
-    $rec['MIN_LEVEL'] = gr('min_level', 'int');
+    $rec['MIN_LEVEL_TEXT'] = gr('min_level_text');
     //$rec['DEVICE_TOKEN'] = gr('device_token');
 
 
@@ -58,4 +58,9 @@ if (is_array($rec)) {
         }
     }
 }
+
+if ($rec['ID'] && $rec['MIN_LEVEL'] && !$rec['MIN_LEVEL_TEXT']) {
+    $rec['MIN_LEVEL_TEXT']=$rec['MIN_LEVEL'];
+}
+
 outHash($rec, $out);
