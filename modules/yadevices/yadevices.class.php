@@ -470,8 +470,29 @@ class yadevices extends module
                 'text' => $command,
             )
         );
-        // попробуем исправить, чтоб станция нас не слушала после того, как скажет наше сообщение.
-        $stopListening=array(
+        $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
+        $client->send(json_encode($msg));
+        $client->close();
+        $result = $client->receive();
+        $result_data = json_decode($result,true);
+        if (is_array($result_data)) {
+            $pause=ceil(mb_strlen(str_replace(array('повтори за мной',' '),'',$command))*5/48);
+            setTimeOut('stopListeningYadevices','require("'.DIR_MODULES.'yadevices/yadevices.class.php");$remote = new yadevices();$remote->stopListening("'.$token.'","'.$ip.'","'.$port.'");',$pause);
+
+            return $result_data;
+        }
+        return false;
+
+    }
+    
+    function stopListening($token, $ip, $port = 1961) {
+        DebMes("Sending stop listening to $ip",'yadevices');
+        $clientConfig = new ClientConfig();
+        $clientConfig->setHeaders([
+            'X-Origin' => 'http://yandex.ru/',
+        ]);
+        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $msg=array(
             'conversationToken' => $token,
             'payload'=> array(
                 'command' => 'serverAction',
@@ -479,11 +500,11 @@ class yadevices extends module
                     'type' => 'server_action',
                     'name' => 'on_suggest'
                 )
-            )  
+            )
         );
+
         $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
         $client->send(json_encode($msg));
-        $client->send(json_encode($stopListening));
         $client->close();
         $result = $client->receive();
         $result_data = json_decode($result,true);
@@ -493,6 +514,7 @@ class yadevices extends module
         return false;
 
     }
+
 
     function sendCommandToStation($id, $command) {
         if (!$command) return false;
