@@ -470,8 +470,20 @@ class yadevices extends module
                 'text' => $command,
             )
         );
+        // попробуем исправить, чтоб станция нас не слушала после того, как скажет наше сообщение.
+        $stopListening=array(
+            'conversationToken' => $token,
+            'payload'=> array(
+                'command' => 'serverAction',
+                'serverActionEventPayload' => array(
+                    'type' => 'server_action',
+                    'name' => 'on_suggest'
+                )
+            )  
+        );
         $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
         $client->send(json_encode($msg));
+        $client->send(json_encode($stopListening));
         $client->close();
         $result = $client->receive();
         $result_data = json_decode($result,true);
