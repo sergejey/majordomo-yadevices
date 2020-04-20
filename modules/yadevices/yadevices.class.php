@@ -125,7 +125,11 @@ class yadevices extends module
 
     function api($params) {
         if ($params['station'] && $params['command']) {
-            return $this->sendCommandToStation((int)$params['station'],$params['command']);
+            if (($params['command'] == 'setVolume') && $params['volume']) {
+                return $this->sendCommandToStation((int)$params['station'],$params['command'],$params['volume']);
+            } else {
+                return $this->sendCommandToStation((int)$params['station'],$params['command']);
+            }
         }
     }
 
@@ -454,7 +458,7 @@ class yadevices extends module
         SQLExec("DELETE FROM yastations WHERE ID='" . $rec['ID'] . "'");
     }
 
-    function sendDataToStation($command, $token, $ip, $port = 1961) {
+    function sendDataToStation($command, $token, $ip, $port = 1961, $dopParam = 0) {
         DebMes("Sending '$command' to $ip",'yadevices');
         $clientConfig = new ClientConfig();
         $clientConfig->setHeaders([
@@ -466,25 +470,38 @@ class yadevices extends module
             'id' => uniqid(''),
             'sentTime' => time()*1000000000,
             'payload'=> array(
-                'command' => 'sendText',
-                'text' => $command,
+//                'command' => 'sendText',
+//               'text' => $command,
             )
         );
+        if ($dopParam && ($command == 'setVolume')) {
+            $msg['payload']['command'] = $command;
+            $msg['payload']['volume'] = (float)$dopParam;
+        } else {
+            $msg['payload']['command'] = 'sendText';
+            $msg['payload']['text'] = $command;
+        }
         $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
         $client->send(json_encode($msg));
-        $client->close();
         $result = $client->receive();
         $result_data = json_decode($result,true);
-        if (is_array($result_data)) {
-            $pause=ceil(mb_strlen(str_replace(array('повтори за мной',' '),'',$command))*5/48);
-            setTimeOut('stopListeningYadevices','require("'.DIR_MODULES.'yadevices/yadevices.class.php");$remote = new yadevices();$remote->stopListening("'.$token.'","'.$ip.'","'.$port.'");',$pause);
 
+        if (is_array($result_data)) {
+            if (mb_stripos($command,'повтори за мной') === 0) {
+             while (($status = $this->getStatus($token,$ip,$port)) && is_array($status) && ($status['state']['aliceState'] != 'LISTENING')) {
+              usleep(500000);
+              //DebMes($status['state']['aliceState']);
+              if ($status['state']['aliceState'] == 'IDLE') break;
+             }
+             $this->stopListening($token,$ip,$port);
+            }
+            $client->close();
             return $result_data;
         }
         return false;
 
     }
-    
+
     function stopListening($token, $ip, $port = 1961) {
         DebMes("Sending stop listening to $ip",'yadevices');
         $clientConfig = new ClientConfig();
@@ -515,14 +532,44 @@ class yadevices extends module
 
     }
 
+    function getStatus($token, $ip, $port = 1961) {
+        $clientConfig = new ClientConfig();
+        $clientConfig->setHeaders([
+            'X-Origin' => 'http://yandex.ru/',
+        ]);
+        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $msg=array(
+            'conversationToken' => $token,
+            'payload'=> array(
+                'command' => 'ping',
+            )
+        );
 
-    function sendCommandToStation($id, $command) {
+        $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
+        $client->send(json_encode($msg));
+        $client->close();
+        $result = $client->receive();
+        $result_data = json_decode($result,true);
+        //DebMes($result_data['state']['aliceState']);
+         if (is_array($result_data)) {
+            return $result_data;
+        }
+        return false;
+
+    }
+
+
+    function sendCommandToStation($id, $command, $dopParam = 0) {
         if (!$command) return false;
         $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=".(int)$id);
         if (!$station['ID'] || !$station['IP']) return false;
 
         if ($station['DEVICE_TOKEN']) {
-            $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP']);
+            if ($dopParam && ($command == 'setVolume')) {
+                $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP'], 1961, $dopParam);
+            } else {
+                $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP']);
+            }
             if (is_array($result)) {
                 return true;
             }
@@ -535,7 +582,11 @@ class yadevices extends module
         $station['DEVICE_TOKEN'] = $token;
         SQLUpdate('yastations', $station);
 
-        $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP']);
+        if ($dopParam && ($command == 'setVolume')) {
+            $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP'], 1961, $dopParam);
+        } else {
+            $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'],$station['IP']);
+        }
         if (is_array($result)) {
             return true;
         }
@@ -648,13 +699,13 @@ class yadevices extends module
  yastations: SCREEN_PRESENT int(3) NOT NULL DEFAULT '0'
  yastations: IS_ONLINE int(3) NOT NULL DEFAULT '0'
  yastations: UPDATED datetime
- 
+
  yadevices: ID int(10) unsigned NOT NULL auto_increment
  yadevices: TITLE varchar(255) NOT NULL DEFAULT ''
  yadevices: IOT_ID varchar(255) NOT NULL DEFAULT ''
  yadevices: DEVICE_TYPE varchar(100) NOT NULL DEFAULT ''
  yadevices: UPDATED datetime
- 
+
  yadevices_capabilities: ID int(10) unsigned NOT NULL auto_increment
  yadevices_capabilities: YADEVICE_ID int(10) NOT NULL DEFAULT '0'
  yadevices_capabilities: TITLE varchar(255) NOT NULL DEFAULT ''
@@ -662,7 +713,7 @@ class yadevices extends module
  yadevices_capabilities: LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: UPDATED datetime
- 
+
 EOD;
         parent::dbInstall($data);
     }
