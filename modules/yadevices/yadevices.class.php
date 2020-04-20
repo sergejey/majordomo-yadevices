@@ -472,13 +472,18 @@ class yadevices extends module
         );
         $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
         $client->send(json_encode($msg));
-        $client->close();
         $result = $client->receive();
         $result_data = json_decode($result,true);
         if (is_array($result_data)) {
-            $pause=ceil(mb_strlen(str_replace(array('повтори за мной',' '),'',$command))*5/48);
-            setTimeOut('stopListeningYadevices','require("'.DIR_MODULES.'yadevices/yadevices.class.php");$remote = new yadevices();$remote->stopListening("'.$token.'","'.$ip.'","'.$port.'");',$pause);
-
+            if (mb_stripos($command,'повтори за мной') === 0) {
+             while (($status = $this->getStatus($token,$ip,$port)) && ($status['state']['aliceState'] != 'LISTENING')) {
+              usleep(500000);
+              DebMes($status['state']['aliceState']);
+              if ($status['state']['aliceState'] == 'IDLE') break;
+             }
+             $this->stopListening($token,$ip,$port);
+            }
+            $client->close();
             return $result_data;
         }
         return false;
@@ -515,7 +520,33 @@ class yadevices extends module
 
     }
 
+    function getStatus($token, $ip, $port = 1961) {
+        $clientConfig = new ClientConfig();
+        $clientConfig->setHeaders([
+            'X-Origin' => 'http://yandex.ru/',
+        ]);
+        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $msg=array(
+            'conversationToken' => $token,
+            'payload'=> array(
+                'command' => 'ping',
+            )
+        );
 
+        $client = new WebSocketClient('wss://'.$ip.':'.$port.'/', $clientConfig);
+        $client->send(json_encode($msg));
+        $client->close();
+        $result = $client->receive();
+        $result_data = json_decode($result,true);
+        //DebMes($result_data['state']['aliceState']);
+         if (is_array($result_data)) {
+            return $result_data;
+        }
+        return false;
+
+    }
+
+    
     function sendCommandToStation($id, $command) {
         if (!$command) return false;
         $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=".(int)$id);
