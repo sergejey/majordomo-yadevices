@@ -476,7 +476,7 @@ class yadevices extends module
         $result_data = json_decode($result,true);
         if (is_array($result_data)) {
             if (mb_stripos($command,'повтори за мной') === 0) {
-             while (($status = $this->getStatus($token,$ip,$port)) && ($status['state']['aliceState'] != 'LISTENING') && is_array($status)) {
+             while (($status = $this->getStatus($token,$ip,$port)) && is_array($status) && ($status['state']['aliceState'] != 'LISTENING')) {
               usleep(500000);
               //DebMes($status['state']['aliceState']);
               if ($status['state']['aliceState'] == 'IDLE') break;
