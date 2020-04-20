@@ -478,7 +478,7 @@ class yadevices extends module
             if (mb_stripos($command,'повтори за мной') === 0) {
              while (($status = $this->getStatus($token,$ip,$port)) && ($status['state']['aliceState'] != 'LISTENING')) {
               usleep(500000);
-              DebMes($status['state']['aliceState']);
+              //DebMes($status['state']['aliceState']);
               if ($status['state']['aliceState'] == 'IDLE') break;
              }
              $this->stopListening($token,$ip,$port);
