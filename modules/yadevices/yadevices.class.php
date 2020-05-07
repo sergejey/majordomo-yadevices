@@ -280,8 +280,13 @@ class yadevices extends module
         $token = $this->getToken();
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
+        if (IsWindowsOS()) {
+            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+        } else {
+            $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
+        }
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
 
         if (preg_match('/devices\/(.+)\/actions/',$url,$m)) {
             $referer = "https://quasar.yandex.ru/skills/iot/device/".$m[1]."?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920//Referer: https://quasar.yandex.ru/skills/iot/device/8f5ccea3-d631-4cfb-9fea-5cc36abba92e?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920";
@@ -297,6 +302,7 @@ class yadevices extends module
             curl_setopt($YaCurl, CURLOPT_HTTPHEADER, array('x-csrf-token:'.$token));
         }
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
         $result = curl_exec($YaCurl);
         dprint($result,false);
         $data = json_decode($result, true);
@@ -318,24 +324,30 @@ class yadevices extends module
         $Ya_pass = $this->config['API_PASSWORD'];
 
         $oldToken = $this->config['API_TOKEN'];
-
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
+        if (IsWindowsOS()) {
+            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+        } else {
+            $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
+        }
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
         $token = curl_exec($YaCurl);
 
         if (!preg_match('/^\w+$/',$token) || strlen($token)<5) {
 
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($YaCurl, CURLOPT_USERAGENT, 'Mozilla/4.0 (Windows; U; Windows NT 5.0; En; rv:1.8.0.2) Gecko/20070306 Firefox/1.0.0.4');
             curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/');
             curl_setopt($YaCurl, CURLOPT_POST, false);
             $loginPage = curl_exec($YaCurl);
 
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/passport?mode=auth&retpath=https://yandex.ru');
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_HEADER, false);
@@ -344,10 +356,10 @@ class yadevices extends module
 
         }
 
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
         curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
         $token = curl_exec($YaCurl);
 
         if (preg_match('/^\w+$/',$token) && strlen($token)>5) {
@@ -364,12 +376,17 @@ class yadevices extends module
         // getAuth token
         $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
         $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=".$ya_music_client_id;
-
+        if (IsWindowsOS()) {
+            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+        } else {
+            $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
+        }
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         $result = curl_exec($YaCurl);
@@ -385,8 +402,9 @@ class yadevices extends module
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, ROOT . 'cms/cached/yandex_cookie.txt');
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, ROOT . 'cms/cached/yandex_cookie.txt');
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_POST, false);
 
