@@ -9,8 +9,14 @@ $table_name = 'yastations';
 $rec = SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
 
 if ($this->mode == 'send_text') {
-    $result = $this->sendCommandToStation($rec['ID'],gr('text'));
-    if ($result) {
+    $out['CLOUD']=gr('cloud','int');
+    if ($out['CLOUD']) {
+        $result = $this->sendCommandToStationCloud($rec['ID'],gr('text'));
+    } else {
+        $result = $this->sendCommandToStation($rec['ID'],gr('text'));
+    }
+
+        if ($result) {
         $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&ok_msg=".urlencode('Command sent!'));
     } else {
         $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&err_msg=".urldecode('Failed to send command'));

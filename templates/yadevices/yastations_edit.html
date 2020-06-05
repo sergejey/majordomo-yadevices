@@ -40,14 +40,15 @@
    <input id="ip" name="ip" value="[#IP#]" type="text" class="form-control"></div>
  </div>
 
- [#if PLATFORM="yandexstation"#]
+
  <div class="form-group">
   <label for="tts" class="col-md-6 control-label">
    <#LANG_CAN_TTS#>:
   </label>
   <div class="col-md-6">
-   <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#]> <#LANG_YES#>
-   <input type="radio" name="tts" value="0"[#if TTS!="1"#] checked[#endif#]> <#LANG_NO#>
+   <input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#]> <#LANG_NO#>
+   <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#]> <#LANG_YES#> (локально)
+   <input type="radio" name="tts" value="2"[#if TTS="2"#] checked[#endif#]> <#LANG_YES#> (облако Yandex)
    </div>
  </div>
 
@@ -60,7 +61,7 @@
     <span class="help-block"><#LANG_EXAMPLE#>: <i>%ThisComputer.minMsgLevel%</i></span>
    </div>
   </div>
- [#endif PLATFORM#]
+
 
 <div class="form-group">
         <div class="col-md-offset-2">
@@ -79,7 +80,7 @@
 </fieldset>
 </form>
 
-[#if ID!="" && PLATFORM="yandexstation"#]
+[#if ID!=""#]
 <hr>
 <form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-inline">
  <fieldset>
@@ -90,8 +91,10 @@
    <div class="col-md-6">
     <input id="text" name="text" value="[#TEXT#]" placeholder="command" type="text" class="form-control"></div>
   </div>
-
-
+  <div class="form-group">
+   <input type="radio" name="cloud" value="0" [#if CLOUD!="1"#] checked[#endif#]> Локально
+   <input type="radio" name="cloud" value="1" [#if CLOUD="1"#] checked[#endif#]> Облако
+  </div>
   <div class="form-group">
    <div class="col-lg-offset-3 col-lg-4">
     <button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_SEND#></button>
