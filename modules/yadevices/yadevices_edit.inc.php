@@ -28,7 +28,7 @@ for($i=0;$i<$total;$i++) {
         if ($properties[$i]['TITLE']=='devices.capabilities.on_off') {
             $properties[$i]['SDEVICE_TYPE'] = 'relay';
         }
-        //$properties[$i]['CAN_LINK']=1;
+        $properties[$i]['CAN_LINK']=1;
     }
 }
 $out['PROPERTIES'] = $properties;

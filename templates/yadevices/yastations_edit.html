@@ -12,14 +12,25 @@
 <legend><#LANG_NEW_RECORD#></legend>
 [#endif ID#]
 <!-- TITLE (varchar) -->
+[#if STATION_ID!=""#]
 <div class="form-group[#if ERR_TITLE#] has-error[#endif#]">
- <label for="title" class="col-md-6 control-label">
+ <label for="station_id" class="col-md-6 control-label">
  Station ID:
- (*)
  </label>
  <div class="col-md-6">
   <input id="station_id" name="station_id" value="[#STATION_ID#]" disabled type="text" class="form-control"></div>
 </div>
+ [#endif STATION_ID#]
+
+ [#if IOT_ID!=""#]
+ <div class="form-group[#if ERR_TITLE#] has-error[#endif#]">
+  <label for="iot_id" class="col-md-6 control-label">
+   IoT ID:
+  </label>
+  <div class="col-md-6">
+   <input id="iot_id" name="iot_id" value="[#IOT_ID#]" disabled type="text" class="form-control"></div>
+ </div>
+ [#endif IOT_ID#]
 
  [#if DEVICE_TOKEN!=""#]
  <div class="form-group">

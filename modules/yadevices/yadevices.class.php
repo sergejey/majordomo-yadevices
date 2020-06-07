@@ -178,9 +178,10 @@ class yadevices extends module
             if ($this->mode == 'refresh') {
                 $this->refreshStations();
                 $this->refreshDevices();
-                $this->redirect("?");
+                $this->redirect("?tab=".$this->tab."&view_mode=".$this->view_mode   );
             }
         }
+
     }
 
     function checkLogin()
@@ -196,16 +197,20 @@ class yadevices extends module
 
     function refreshDevices()
     {
+        $iot_ids=array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
         if (is_array($data['rooms'])) {
             $rooms = $data['rooms'];
             foreach ($rooms as $room) {
                 $devices = $room['devices'];
                 if (is_array($devices)) {
+
+
                     foreach ($devices as $device) {
                         $iot_id = $device['id'];
                         $type = $device['type'];
                         $name = $device['name'];
+                        $iot_ids[]=$iot_id;
 
                         $device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $iot_id . "'");
                         $device_rec['TITLE'] = $name;
@@ -234,8 +239,17 @@ class yadevices extends module
                             } else {
                                 SQLUpdate('yadevices_capabilities', $c_rec);
                             }
-
                         }
+
+                        if (preg_match('/^devices.types.smart_speaker/uis',$type)) {
+                            $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
+                            if ($rec['ID']) {
+                                $rec['IOT_ID'] = $iot_id;
+                                $rec['UPDATED'] = date('Y-m-d H:i:s');
+                                SQLUpdate('yastations', $rec);
+                            }
+                        }
+
                     }
                 }
             }
@@ -245,6 +259,7 @@ class yadevices extends module
             foreach ($speakers as $speaker) {
                 $name = $speaker['name'];
                 $iot_id = $speaker['id'];
+                $iot_ids[]=$iot_id;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
                 if ($rec['ID']) {
                     $rec['IOT_ID'] = $iot_id;
@@ -253,6 +268,15 @@ class yadevices extends module
                 }
             }
         }
+
+        $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
+        $total = count($all_devices);
+        for($i=0;$i<$total;$i++) {
+            if (!in_array($all_devices[$i]['IOT_ID'],$iot_ids)) {
+                $this->delete_yadevice($all_devices[$i]['ID']);
+            }
+        }
+
     }
 
     function yandex_encode($in) {
@@ -604,6 +628,11 @@ class yadevices extends module
         SQLExec("DELETE FROM yastations WHERE ID='" . $rec['ID'] . "'");
     }
 
+    function delete_yadevice($id) {
+        SQLExec("DELETE FROM yadevices_capabilities WHERE YADEVICE_ID=".(int)$id);
+        SQLExec("DELETE FROM yadevices WHERE ID=".(int)$id);
+    }
+
     function sendDataToStation($command, $token, $ip, $port = 1961, $dopParam = 0)
     {
         DebMes("Sending '$command' to $ip", 'yadevices');
@@ -773,7 +802,7 @@ class yadevices extends module
             }
 
             // TTS CLOUD
-            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=2");
+            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=2 AND IOT_ID!=''");
             foreach ($stations as $station) {
                 $min_level = 0;
                 if ($station['MIN_LEVEL_TEXT'] != '') {
@@ -801,13 +830,7 @@ class yadevices extends module
                 array('state' => array('instance' => 'on', 'value' => $value),
                     'type' => $command_type
                 )));
-            //dprint($data);
-            dprint($url, false);
-            dprint(json_encode($data), false);
             $result = $this->apiRequest($url, 'POST', $data);
-            dprint($result, false);
-            //https://iot.quasar.yandex.ru/m/user/devices/<iot_id>/actions
-            //{"JSON":{"actions":[{"state":{"instance":"on","value":true},"type":"devices.capabilities.on_off"}]}}
         }
     }
 
