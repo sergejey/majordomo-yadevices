@@ -41,6 +41,8 @@ if ($this->mode == 'update') {
     $rec['IP'] = gr('ip');
     $rec['TTS'] = gr('tts', 'int');
     $rec['MIN_LEVEL_TEXT'] = gr('min_level_text');
+    $rec['TTS_EFFECT'] = gr('tts_effect');
+    $rec['TTS_ANNOUNCE'] = gr('tts_announce');
     //$rec['DEVICE_TOKEN'] = gr('device_token');
 
 

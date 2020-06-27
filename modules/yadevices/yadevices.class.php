@@ -1,5 +1,9 @@
 <?php
 
+/*
+ * greetings to https://github.com/AlexxIT/YandexStation/ :)
+ */
+
 spl_autoload_register(function ($class_name) {
     $path = DIR_MODULES . 'yadevices/' . $class_name . '.php';
     $path = str_replace('\\', '/', $path);
@@ -125,11 +129,39 @@ class yadevices extends module
 
     function api($params)
     {
-        if ($params['station'] && $params['command']) {
-            if (($params['command'] == 'setVolume') && $params['volume']) {
-                return $this->sendCommandToStation((int)$params['station'], $params['command'], $params['volume']);
+        if ($params['station'] && ($params['command'] || $params['say'])) {
+            $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$params['station']);
+            $effect = $params['effect'];
+            $announce = $params['announce'];
+            if (!$effect && $station['TTS_EFFECT']) {
+                $effect = $station['TTS_EFFECT'];
+            }
+            if (!$announce && $station['TTS_ANNOUNCE']) {
+                $announce = $station['TTS_ANNOUNCE'];
+            }
+            //TTS=2 AND IOT_ID!=''
+            if ($station['TTS']==2 && $station['IOT_ID']!='') {
+                if ($params['say']) {
+                    $msg = $params['say'];
+                    if ($effect) {
+                        $msg = '<speaker effect="'.$effect.'">'.$msg;
+                    }
+                    if ($announce) {
+                        if (!preg_match('/\.opus$/',$announce)) $announce.='.opus';
+                        $msg = '<speaker audio="'.$announce.'">'.$msg;
+                    }
+                    return $this->sendCloudTTS($station['IOT_ID'],$msg);
+                } else {
+                    return $this->sendCloudTTS($station['IOT_ID'],$params['command'],'text');
+                }
             } else {
-                return $this->sendCommandToStation((int)$params['station'], $params['command']);
+                if (($params['command'] == 'setVolume') && $params['volume']) {
+                    return $this->sendCommandToStation((int)$params['station'], $params['command'], $params['volume']);
+                } elseif ($params['say']) {
+                    $this->sendCommandToStation((int)$params['station'], 'повтори за мной ' . $params['say']);
+                } else {
+                    return $this->sendCommandToStation((int)$params['station'], $params['command']);
+                }
             }
         }
     }
@@ -341,6 +373,8 @@ class yadevices extends module
 
         $station_rec=SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='".$iot_id."'");
 
+        DebMes("Sending cloud '$action: $phrase' to ".$station_rec['TITLE'], 'yadevices');
+
         //dprint($station_rec);
 
         //$action = 'phrase';
@@ -363,10 +397,12 @@ class yadevices extends module
         );
         $scenario_id = $station_rec['TTS_SCENARIO'];
         $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id,'PUT',$payload);
-        //dprint($result,false);
-        $payload = array();
-        $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id.'/actions','POST',$payload);
-        //dprint($result);
+        if (is_array($result)) {
+            $payload = array();
+            $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id.'/actions','POST',$payload);
+        } else {
+            //dprint("failed to set scenario",false);
+        }
     }
 
     function refreshStations()
@@ -396,7 +432,11 @@ class yadevices extends module
     function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
     {
         $this->getConfig();
-        $token = $this->getToken();
+        //dprint($this->config);
+        $token = $this->config['API_TOKEN'];
+
+        //dprint("tryin with token: ".$token,false);
+
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         if (IsWindowsOS()) {
@@ -435,31 +475,42 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
         $result = curl_exec($YaCurl);
 
+        //echo trim($result);exit;
+        //dprint($result,false);
+
         $data = json_decode($result, true);
-        if (!$repeating && ($data['code']!='BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error')) {
+        if (!$repeating && ($data['code']!='BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
+            //dprint("Failed so need another token: ".$result,false);
             $token = $this->getToken();
             if ($token) {
                 $data = $this->apiRequest($url, $method, $params, 1);
             } else {
                 return false;
             }
+        } elseif ($repeating  && ($data['code']!='BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
+            //dprint("Failed again: ".$result,false);
         }
         return $data;
     }
 
     function getToken()
     {
+
+
         $token = '';
-        $YaCurl = curl_init();
+
         $Ya_login = $this->config['API_USERNAME'];
         $Ya_pass = $this->config['API_PASSWORD'];
 
         $oldToken = $this->config['API_TOKEN'];
+
         if (IsWindowsOS()) {
             $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
         } else {
             $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
         }
+
+        $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
         //curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
@@ -468,50 +519,82 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
         $result = curl_exec($YaCurl);
+        curl_close($YaCurl);
+
         if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
+            //dprint($result,false);
             $token = $m[1];
+        } else {
+            //dprint("basic token failed",false);
         }
 
         if (!$token) {
 
+
+            //dprint("Trying to authorize",false);
+
+            //SaveFile($cookie,"");
+
+            $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($YaCurl, CURLOPT_USERAGENT, 'Mozilla/4.0 (Windows; U; Windows NT 5.0; En; rv:1.8.0.2) Gecko/20070306 Firefox/1.0.0.4');
-            curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/');
+            curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/profile');
             curl_setopt($YaCurl, CURLOPT_POST, false);
+            curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
             $loginPage = curl_exec($YaCurl);
+            curl_close($YaCurl);
 
+            //dprint("login page: ".$loginPage,false);
+            //dprint(LoadFile($cookie));
+
+            $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/passport?mode=auth&retpath=https://yandex.ru');
+            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_HEADER, false);
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, http_build_query(array('login' => $Ya_login, 'passwd' => $Ya_pass)));
+            //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
             $loginResult = curl_exec($YaCurl);
+            curl_close($YaCurl);
+
+            //dprint("login result: ".$loginResult,false);
+
+            /*
+curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
+curl_setopt($YaCurl, CURLOPT_POST, false);
+curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+$token = curl_exec($YaCurl);
+*/
+
+            $YaCurl = curl_init();
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+            //curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
+            curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
+            //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
+            curl_setopt($YaCurl, CURLOPT_HEADER, 1);
+            curl_setopt($YaCurl, CURLOPT_POST, false);
+            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+            $result = curl_exec($YaCurl);
+            curl_close($YaCurl);
+
+            if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
+                $token = $m[1];
+                //dprint("token: $token",false);
+            } else {
+                //dprint($result,false);
+            }
 
         }
 
-        /*
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        $token = curl_exec($YaCurl);
-        */
 
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
-        curl_setopt($YaCurl, CURLOPT_HEADER, 1);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        $result = curl_exec($YaCurl);
-        if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
-            $token = $m[1];
-        }
         if ($token) {
             $this->config['API_TOKEN'] = $token;
             $this->saveConfig();
@@ -546,7 +629,6 @@ class yadevices extends module
             $oauth_token = $m[1];
         } else {
             echo $result;
-            exit;
             return false;
         }
 
@@ -783,23 +865,14 @@ class yadevices extends module
     function processSubscription($event, $details = '')
     {
         $this->getConfig();
+
+        if ($event == 'SAY') {
+            //DebMes("$event: ".json_encode($details),'yadevices');
+        }
+
         if ($event == 'SAY') {
             $level = (int)$details['level'];
             $message = $details['message'];
-
-            //TTS LOCAL
-            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=1");
-            foreach ($stations as $station) {
-                $min_level = 0;
-                if ($station['MIN_LEVEL_TEXT'] != '') {
-                    $min_level = processTitle($station['MIN_LEVEL_TEXT']);
-                } elseif ($station['MIN_LEVEL']) {
-                    $min_level = $station['MIN_LEVEL'];
-                }
-                if ($level >= $min_level) {
-                    $this->sendCommandToStation($station['ID'], 'повтори за мной ' . $message);
-                }
-            }
 
             // TTS CLOUD
             $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=2 AND IOT_ID!=''");
@@ -811,9 +884,26 @@ class yadevices extends module
                     $min_level = $station['MIN_LEVEL'];
                 }
                 if ($level >= $min_level) {
-                    $this->sendCloudTTS($station['IOT_ID'],$message);
+                    //$this->sendCloudTTS($station['IOT_ID'],$message);
+                    callAPI('/api/module/yadevices','GET',array('station'=>$station['ID'],'say'=>$message));
                 }
             }
+
+            //TTS LOCAL
+            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=1");
+            foreach ($stations as $station) {
+                $min_level = 0;
+                if ($station['MIN_LEVEL_TEXT'] != '') {
+                    $min_level = processTitle($station['MIN_LEVEL_TEXT']);
+                } elseif ($station['MIN_LEVEL']) {
+                    $min_level = $station['MIN_LEVEL'];
+                }
+                if ($level >= $min_level) {
+                    //$this->sendCommandToStation($station['ID'], 'повтори за мной ' . $message);
+                    callAPI('/api/module/yadevices','GET',array('station'=>$station['ID'],'say'=>$message));
+                }
+            }
+
         }
     }
 
@@ -893,6 +983,8 @@ class yadevices extends module
  yastations: ICON_URL varchar(255) NOT NULL DEFAULT ''
  yastations: DEVICE_TOKEN varchar(255) NOT NULL DEFAULT ''
  yastations: TTS_SCENARIO varchar(255) NOT NULL DEFAULT ''
+ yastations: TTS_EFFECT varchar(255) NOT NULL DEFAULT ''
+ yastations: TTS_ANNOUNCE varchar(255) NOT NULL DEFAULT ''
  yastations: SCREEN_CAPABLE int(3) NOT NULL DEFAULT '0'
  yastations: SCREEN_PRESENT int(3) NOT NULL DEFAULT '0'
  yastations: IS_ONLINE int(3) NOT NULL DEFAULT '0'
@@ -922,28 +1014,3 @@ EOD;
 * TW9kdWxlIGNyZWF0ZWQgRGVjIDMxLCAyMDE5IHVzaW5nIFNlcmdlIEouIHdpemFyZCAoQWN0aXZlVW5pdCBJbmMgd3d3LmFjdGl2ZXVuaXQuY29tKQ==
 *
 */
-/*
-
-GET https://iot.quasar.yandex.ru/m/user/devices
-
-GET https://quasar.yandex.ru/get_device_config?device_id=<station_id>&platform=yandexstation
-
-GET https://iot.quasar.yandex.ru/m/user/devices/<iot_id>/configuration
-
-GET https://iot.quasar.yandex.ru/m/user/devices/<iot_id>
-
-POST
-https://iot.quasar.yandex.ru/m/user/devices/<iot_id>/actions
-{"JSON":{"actions":[{"state":{"instance":"on","value":true},"type":"devices.capabilities.on_off"}]}}
-
-GET https://iot.quasar.yandex.ru/m/user/devices/<iot_id>
-
-сценарии:
-GET https://iot.quasar.yandex.ru/m/user/scenarios
-
-Запуск
-POST https://iot.quasar.yandex.ru/m/user/scenarios/<iot_id>/actions
-
-Работа со станцией:
-https://github.com/anVlad11/dd-alicization
- */

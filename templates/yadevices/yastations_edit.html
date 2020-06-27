@@ -73,6 +73,37 @@
    </div>
   </div>
 
+ <div class="form-group">
+  <label for="tts_effect" class="col-md-6 control-label">
+   Эффект для речи:
+  </label>
+  <div class="col-md-6">
+   <select name="tts_effect" id="tts_effect" class="form-control">
+    <option value=""><#LANG_NO#></option>
+    <option value="behind_the_wall"[#if TTS_EFFECT="behind_the_wall"#] selected[#endif#]>голос из-за стены</option>
+    <option value="hamster"[#if TTS_EFFECT="hamster"#] selected[#endif#]>голос хомяка</option>
+    <option value="megaphone"[#if TTS_EFFECT="megaphone"#] selected[#endif#]>голос через мегафон</option>
+    <option value="pitch_down"[#if TTS_EFFECT="pitch_down"#] selected[#endif#]>низкий голос</option>
+    <option value="psychodelic"[#if TTS_EFFECT="psychodelic"#] selected[#endif#]>психоделический голос</option>
+    <option value="pulse"[#if TTS_EFFECT="pulse"#] selected[#endif#]>голос с прерываниями</option>
+    <option value="train_announce"[#if TTS_EFFECT="train_announce"#] selected[#endif#]>громкоговоритель на вокзале</option>
+   </select>
+  </div>
+ </div>
+
+ <div class="form-group">
+  <label for="tts_announce" class="col-md-6 control-label">
+   Анонс для речи:
+  </label>
+  <div class="col-md-6">
+   <input type="text" name="tts_announce" value="[#TTS_ANNOUNCE#]" class="form-control">
+   <div class="help-text">
+    Например: alice-sounds-game-win-1 или alice-sounds-game-8-bit-coin-1<br/>
+    Все доступные значения можно посмотреть на <a href="https://yandex.ru/dev/dialogs/alice/doc/sounds-docpage/" target="_blank">данной странице</a>
+   </div>
+  </div>
+ </div>
+
 
 <div class="form-group">
         <div class="col-md-offset-2">
@@ -122,6 +153,17 @@ Code sample:
 <pre>
  callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'повтори за мной раз-два-три'));
 </pre>
+
+Проговаривание фразы
+<pre>
+ callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три'));
+</pre>
+
+Добавление эффекта и анонса
+<pre>
+ callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три','effect'=>'megaphone','announce'=>'alice-sounds-game-win-1'));
+</pre>
+
  
 Изменение громкости от 0.1 до 1.0:
 <pre>
