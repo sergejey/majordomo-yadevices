@@ -129,6 +129,7 @@ class yadevices extends module
 
     function api($params)
     {
+        $this->getConfig();
         if ($params['station'] && ($params['command'] || $params['say'])) {
             $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$params['station']);
             $effect = $params['effect'];
@@ -596,6 +597,7 @@ $token = curl_exec($YaCurl);
 
 
         if ($token) {
+            $this->getConfig();
             $this->config['API_TOKEN'] = $token;
             $this->saveConfig();
         } else {
