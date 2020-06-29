@@ -401,9 +401,16 @@ class yadevices extends module
         if (is_array($result)) {
             $payload = array();
             $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id.'/actions','POST',$payload);
+            if (is_array(($result))) {
+                return true;
+            } else {
+                DebMes("Failed to run TTS scenario",'yadevices');
+            }
         } else {
+            DebMes("Failed to update TTS scenario",'yadevices');
             //dprint("failed to set scenario",false);
         }
+        return false;
     }
 
     function refreshStations()
@@ -514,13 +521,11 @@ class yadevices extends module
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
         curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
         curl_setopt($YaCurl, CURLOPT_HEADER, 1);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
         $result = curl_exec($YaCurl);
         curl_close($YaCurl);
 
@@ -540,6 +545,7 @@ class yadevices extends module
 
             $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($YaCurl, CURLOPT_USERAGENT, 'Mozilla/4.0 (Windows; U; Windows NT 5.0; En; rv:1.8.0.2) Gecko/20070306 Firefox/1.0.0.4');
@@ -549,36 +555,22 @@ class yadevices extends module
             $loginPage = curl_exec($YaCurl);
             curl_close($YaCurl);
 
-            //dprint("login page: ".$loginPage,false);
-            //dprint(LoadFile($cookie));
-
             $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
             curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/passport?mode=auth&retpath=https://yandex.ru');
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_HEADER, false);
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, http_build_query(array('login' => $Ya_login, 'passwd' => $Ya_pass)));
-            //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
             $loginResult = curl_exec($YaCurl);
             curl_close($YaCurl);
 
-            //dprint("login result: ".$loginResult,false);
-
-            /*
-curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
-curl_setopt($YaCurl, CURLOPT_POST, false);
-curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-$token = curl_exec($YaCurl);
-*/
 
             $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-            //curl_setopt($YaCurl, CURLOPT_URL, 'https://frontend.vh.yandex.ru/csrf_token');
             curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
-            //curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
             curl_setopt($YaCurl, CURLOPT_HEADER, 1);
             curl_setopt($YaCurl, CURLOPT_POST, false);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
@@ -588,7 +580,6 @@ $token = curl_exec($YaCurl);
 
             if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
                 $token = $m[1];
-                //dprint("token: $token",false);
             } else {
                 //dprint($result,false);
             }
@@ -601,6 +592,7 @@ $token = curl_exec($YaCurl);
             $this->config['API_TOKEN'] = $token;
             $this->saveConfig();
         } else {
+            DebMes("Failed to get csrfToken",'yadevices');
             $this->config['API_TOKEN'] = '';
         }
         return $token;
@@ -608,7 +600,6 @@ $token = curl_exec($YaCurl);
 
     function getDeviceToken($device_id, $platform)
     {
-
         // getAuth token
         $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
         $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
