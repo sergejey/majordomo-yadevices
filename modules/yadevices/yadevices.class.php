@@ -141,19 +141,19 @@ class yadevices extends module
                 $announce = $station['TTS_ANNOUNCE'];
             }
             //TTS=2 AND IOT_ID!=''
-            if ($station['TTS']==2 && $station['IOT_ID']!='') {
+            if ($station['TTS'] == 2 && $station['IOT_ID'] != '') {
                 if ($params['say']) {
                     $msg = $params['say'];
                     if ($effect) {
-                        $msg = '<speaker effect="'.$effect.'">'.$msg;
+                        $msg = '<speaker effect="' . $effect . '">' . $msg;
                     }
                     if ($announce) {
-                        if (!preg_match('/\.opus$/',$announce)) $announce.='.opus';
-                        $msg = '<speaker audio="'.$announce.'">'.$msg;
+                        if (!preg_match('/\.opus$/', $announce)) $announce .= '.opus';
+                        $msg = '<speaker audio="' . $announce . '">' . $msg;
                     }
-                    return $this->sendCloudTTS($station['IOT_ID'],$msg);
+                    return $this->sendCloudTTS($station['IOT_ID'], $msg);
                 } else {
-                    return $this->sendCloudTTS($station['IOT_ID'],$params['command'],'text');
+                    return $this->sendCloudTTS($station['IOT_ID'], $params['command'], 'phrase_action');
                 }
             } else {
                 if (($params['command'] == 'setVolume') && $params['volume']) {
@@ -211,7 +211,7 @@ class yadevices extends module
             if ($this->mode == 'refresh') {
                 $this->refreshStations();
                 $this->refreshDevices();
-                $this->redirect("?tab=".$this->tab."&view_mode=".$this->view_mode   );
+                $this->redirect("?tab=" . $this->tab . "&view_mode=" . $this->view_mode);
             }
         }
 
@@ -230,7 +230,7 @@ class yadevices extends module
 
     function refreshDevices()
     {
-        $iot_ids=array();
+        $iot_ids = array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
         if (is_array($data['rooms'])) {
             $rooms = $data['rooms'];
@@ -243,7 +243,7 @@ class yadevices extends module
                         $iot_id = $device['id'];
                         $type = $device['type'];
                         $name = $device['name'];
-                        $iot_ids[]=$iot_id;
+                        $iot_ids[] = $iot_id;
 
                         $device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $iot_id . "'");
                         $device_rec['TITLE'] = $name;
@@ -274,7 +274,7 @@ class yadevices extends module
                             }
                         }
 
-                        if (preg_match('/^devices.types.smart_speaker/uis',$type)) {
+                        if (preg_match('/^devices.types.smart_speaker/uis', $type)) {
                             $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
                             if ($rec['ID']) {
                                 $rec['IOT_ID'] = $iot_id;
@@ -292,7 +292,7 @@ class yadevices extends module
             foreach ($speakers as $speaker) {
                 $name = $speaker['name'];
                 $iot_id = $speaker['id'];
-                $iot_ids[]=$iot_id;
+                $iot_ids[] = $iot_id;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
                 if ($rec['ID']) {
                     $rec['IOT_ID'] = $iot_id;
@@ -304,26 +304,28 @@ class yadevices extends module
 
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
         $total = count($all_devices);
-        for($i=0;$i<$total;$i++) {
-            if (!in_array($all_devices[$i]['IOT_ID'],$iot_ids)) {
+        for ($i = 0; $i < $total; $i++) {
+            if (!in_array($all_devices[$i]['IOT_ID'], $iot_ids)) {
                 $this->delete_yadevice($all_devices[$i]['ID']);
             }
         }
 
     }
 
-    function yandex_encode($in) {
+    function yandex_encode($in)
+    {
         $in = strtolower($in);
-        $MASK_EN = array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','-');
-        $MASK_RU = array('о','е','а','и','н','т','с','р','в','л','к','м','д','п','у','я','ы');
-        return 'мжд '.str_replace($MASK_EN,$MASK_RU,$in);
+        $MASK_EN = array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', '-');
+        $MASK_RU = array('о', 'е', 'а', 'и', 'н', 'т', 'с', 'р', 'в', 'л', 'к', 'м', 'д', 'п', 'у', 'я', 'ы');
+        return 'мжд ' . str_replace($MASK_EN, $MASK_RU, $in);
     }
 
-    function yandex_decode($in) {
-        $in = mb_substr($in,4);
-        $MASK_EN = array('0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','-');
-        $MASK_RU = array('о','е','а','и','н','т','с','р','в','л','к','м','д','п','у','я','ы');
-        return str_replace($MASK_RU,$MASK_EN,$in);
+    function yandex_decode($in)
+    {
+        $in = mb_substr($in, 4);
+        $MASK_EN = array('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', '-');
+        $MASK_RU = array('о', 'е', 'а', 'и', 'н', 'т', 'с', 'р', 'в', 'л', 'к', 'м', 'д', 'п', 'у', 'я', 'ы');
+        return str_replace($MASK_RU, $MASK_EN, $in);
     }
 
     function addScenarios($repeating = 0)
@@ -346,23 +348,29 @@ class yadevices extends module
                     'name' => $this->yandex_encode($station_id),
                     'icon' => 'home',
                     'trigger_type' => 'scenario.trigger.voice',
-                    'devices' => array(),
-                    'external_actions' => array(
+                    'requested_speaker_capabilities' => array(),
+                    'devices' => array(
                         array(
-                            'type' => 'scenario.external_action.phrase',
-                            'parameters' => array(
-                                'current_device' => false,
-                                'device_id' => $station_id,
-                                'phrase' => '-')
+                            'id' => $station_id,
+                            'capabilities' => array(
+                                array(
+                                    'type' => 'devices.capabilities.quasar.server_action',
+                                    'state' => array(
+                                        'instance' => 'phrase_action',
+                                        'value' => '-'
+                                    )
+                                )
+                            )
                         )
-                    ));
-                $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios','POST',$payload);
-                if ($result['status']=='ok') {
+                    ),
+                );
+                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios', 'POST', $payload);
+                if ($result['status'] == 'ok') {
                     $some_added = 1;
                 }
             } else {
                 $station['TTS_SCENARIO'] = $scenarios[strtolower($station_id)]['id'];
-                SQLUpdate('yastations',$station);
+                SQLUpdate('yastations', $station);
             }
         }
         if ($some_added && !$repeating) {
@@ -370,11 +378,16 @@ class yadevices extends module
         }
     }
 
-    function sendCloudTTS($iot_id, $phrase, $action = 'phrase') {
+    function sendCloudTTS($iot_id, $phrase, $action = 'phrase_action')
+    {
 
-        $station_rec=SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='".$iot_id."'");
+        $station_rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . $iot_id . "'");
 
-        DebMes("Sending cloud '$action: $phrase' to ".$station_rec['TITLE'], 'yadevices');
+        if (mb_strlen($phrase, 'UTF-8') >= 100) {
+            $phrase = mb_substr($phrase, 0, 99, 'UTF-8');
+        }
+
+        //DebMes("Sending cloud '$action: $phrase' to " . $station_rec['TITLE'], 'yadevices');
 
         //dprint($station_rec);
 
@@ -386,29 +399,41 @@ class yadevices extends module
             'name' => $this->yandex_encode($iot_id),
             'icon' => 'home',
             'trigger_type' => 'scenario.trigger.voice',
-            'devices' => array(),
-            'external_actions' => array(
-                array('type' => "scenario.external_action." . $action,
-                    'parameters' => array(
-                        'current_device' => false,
-                        'device_id' => $iot_id,
-                        $action => $phrase)
+            'devices' => array(
+                array(
+                    'id' => $iot_id,
+                    'capabilities' => array(
+                        array(
+                            'type' => 'devices.capabilities.quasar.server_action',
+                            'state' => array(
+                                'instance' => $action,
+                                'value' => $phrase
+                            )
+                        )
+                    )
                 )
-            )
+            ),
         );
         $scenario_id = $station_rec['TTS_SCENARIO'];
-        $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id,'PUT',$payload);
+        $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
+
+        //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
+        //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
+
         if (is_array($result)) {
             $payload = array();
-            $result=$this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/'.$scenario_id.'/actions','POST',$payload);
+            $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
+
+            //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " POST:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
+            //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
+
             if (is_array(($result))) {
                 return true;
             } else {
-                DebMes("Failed to run TTS scenario",'yadevices');
+                DebMes("Failed to run TTS scenario", 'yadevices');
             }
         } else {
-            DebMes("Failed to update TTS scenario",'yadevices');
-            //dprint("failed to set scenario",false);
+            DebMes("Failed to update TTS scenario", 'yadevices');
         }
         return false;
     }
@@ -448,7 +473,7 @@ class yadevices extends module
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         if (IsWindowsOS()) {
-            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+            $cookie = 'yandex_cookie.txt';
         } else {
             $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
         }
@@ -487,7 +512,7 @@ class yadevices extends module
         //dprint($result,false);
 
         $data = json_decode($result, true);
-        if (!$repeating && ($data['code']!='BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
+        if (!$repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
             //dprint("Failed so need another token: ".$result,false);
             $token = $this->getToken();
             if ($token) {
@@ -495,7 +520,7 @@ class yadevices extends module
             } else {
                 return false;
             }
-        } elseif ($repeating  && ($data['code']!='BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
+        } elseif ($repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
             //dprint("Failed again: ".$result,false);
         }
         return $data;
@@ -513,7 +538,7 @@ class yadevices extends module
         $oldToken = $this->config['API_TOKEN'];
 
         if (IsWindowsOS()) {
-            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+            $cookie = 'yandex_cookie.txt';
         } else {
             $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
         }
@@ -529,7 +554,7 @@ class yadevices extends module
         $result = curl_exec($YaCurl);
         curl_close($YaCurl);
 
-        if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
+        if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
             //dprint($result,false);
             $token = $m[1];
         } else {
@@ -562,6 +587,7 @@ class yadevices extends module
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_HEADER, false);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, http_build_query(array('login' => $Ya_login, 'passwd' => $Ya_pass)));
             $loginResult = curl_exec($YaCurl);
             curl_close($YaCurl);
@@ -578,7 +604,7 @@ class yadevices extends module
             $result = curl_exec($YaCurl);
             curl_close($YaCurl);
 
-            if (preg_match('/"csrfToken2":"(.+?)"/',$result,$m)) {
+            if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
                 $token = $m[1];
             } else {
                 //dprint($result,false);
@@ -592,7 +618,7 @@ class yadevices extends module
             $this->config['API_TOKEN'] = $token;
             $this->saveConfig();
         } else {
-            DebMes("Failed to get csrfToken",'yadevices');
+            DebMes("Failed to get csrfToken", 'yadevices');
             $this->config['API_TOKEN'] = '';
         }
         return $token;
@@ -604,7 +630,7 @@ class yadevices extends module
         $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
         $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
         if (IsWindowsOS()) {
-            $cookie = ROOT . 'cms\cached\yandex_cookie.txt';
+            $cookie = 'yandex_cookie.txt';
         } else {
             $cookie = ROOT . 'cms/cached/yandex_cookie.txt';
         }
@@ -703,9 +729,10 @@ class yadevices extends module
         SQLExec("DELETE FROM yastations WHERE ID='" . $rec['ID'] . "'");
     }
 
-    function delete_yadevice($id) {
-        SQLExec("DELETE FROM yadevices_capabilities WHERE YADEVICE_ID=".(int)$id);
-        SQLExec("DELETE FROM yadevices WHERE ID=".(int)$id);
+    function delete_yadevice($id)
+    {
+        SQLExec("DELETE FROM yadevices_capabilities WHERE YADEVICE_ID=" . (int)$id);
+        SQLExec("DELETE FROM yadevices WHERE ID=" . (int)$id);
     }
 
     function sendDataToStation($command, $token, $ip, $port = 1961, $dopParam = 0)
@@ -816,7 +843,7 @@ class yadevices extends module
     {
         if (!$command) return false;
         $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
-        $this->sendCloudTTS($station['IOT_ID'],$command,'text');
+        $this->sendCloudTTS($station['IOT_ID'], $command, 'text_action');
     }
 
     function sendCommandToStation($id, $command, $dopParam = 0)
@@ -878,7 +905,7 @@ class yadevices extends module
                 }
                 if ($level >= $min_level) {
                     //$this->sendCloudTTS($station['IOT_ID'],$message);
-                    callAPI('/api/module/yadevices','GET',array('station'=>$station['ID'],'say'=>$message));
+                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'say' => $message));
                 }
             }
 
@@ -893,7 +920,7 @@ class yadevices extends module
                 }
                 if ($level >= $min_level) {
                     //$this->sendCommandToStation($station['ID'], 'повтори за мной ' . $message);
-                    callAPI('/api/module/yadevices','GET',array('station'=>$station['ID'],'say'=>$message));
+                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'say' => $message));
                 }
             }
 
