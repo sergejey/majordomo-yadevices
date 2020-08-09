@@ -153,7 +153,7 @@ class yadevices extends module
                     }
                     return $this->sendCloudTTS($station['IOT_ID'], $msg);
                 } else {
-                    return $this->sendCloudTTS($station['IOT_ID'], $params['command'], 'phrase_action');
+                    return $this->sendCloudTTS($station['IOT_ID'], $params['command'], 'text_action');
                 }
             } else {
                 if (($params['command'] == 'setVolume') && $params['volume']) {
