@@ -164,9 +164,13 @@ Code sample:
  callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три','effect'=>'megaphone','announce'=>'alice-sounds-game-win-1'));
 </pre>
 
- 
-Изменение громкости от 0.1 до 1.0:
+Изменение громкости от 0.1 до 1.0 (на Яндекс.Станции):
 <pre>
  callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>0.5));
+</pre>
+ 
+Изменение громкости от 1 до 10 (на Яндекс.Станции Мини):
+<pre>
+ callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>6));
 </pre>
 [#endif ID#]
