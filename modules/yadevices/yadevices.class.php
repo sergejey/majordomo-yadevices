@@ -386,7 +386,7 @@ class yadevices extends module
         if (mb_strlen($phrase, 'UTF-8') >= 100) {
             $phrase = mb_substr($phrase, 0, 99, 'UTF-8');
         }
-
+        $phrase = str_replace(array('(',')'), ' ', $phrase);
         //DebMes("Sending cloud '$action: $phrase' to " . $station_rec['TITLE'], 'yadevices');
 
         //dprint($station_rec);
@@ -416,24 +416,20 @@ class yadevices extends module
         );
         $scenario_id = $station_rec['TTS_SCENARIO'];
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
-
         //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
         //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
-
-        if (is_array($result)) {
+        if (is_array($result) && $result['status']=='ok') {
             $payload = array();
             $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
-
             //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " POST:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
             //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
-
-            if (is_array(($result))) {
+            if (is_array($result) && $result['status']=='ok') {
                 return true;
             } else {
-                DebMes("Failed to run TTS scenario", 'yadevices');
+                DebMes("Failed to run TTS scenario: ".json_encode($result), 'yadevices');
             }
         } else {
-            DebMes("Failed to update TTS scenario", 'yadevices');
+            DebMes("Failed to update TTS scenario: ".json_encode($result)."\n".$result['message'], 'yadevices');
         }
         return false;
     }
