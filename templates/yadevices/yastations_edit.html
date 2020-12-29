@@ -57,9 +57,20 @@
    <#LANG_CAN_TTS#>:
   </label>
   <div class="col-md-6">
-   <input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#]> <#LANG_NO#>
-   <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#]> <#LANG_YES#> (локально)
-   <input type="radio" name="tts" value="2"[#if TTS="2"#] checked[#endif#]> <#LANG_YES#> (облако Yandex)
+   <script type="text/javascript">
+    function ttsTypeUpdated() {
+     if ($('input[name="tts"]:checked').val()=='1') {
+      $('#tts_effect_row').show();
+      $('#tts_announce_row').show();
+     } else {
+      $('#tts_effect_row').hide();
+      $('#tts_announce_row').hide();
+     }
+    }
+   </script>
+   <input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_NO#>
+   <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (локально)
+   <input type="radio" name="tts" value="2"[#if TTS="2"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (облако Yandex)
    </div>
  </div>
 
@@ -73,7 +84,7 @@
    </div>
   </div>
 
- <div class="form-group">
+ <div class="form-group" id="tts_effect_row"[#if TTS!="1"#] style="display:none"[#endif#]>
   <label for="tts_effect" class="col-md-6 control-label">
    Эффект для речи:
   </label>
@@ -91,7 +102,7 @@
   </div>
  </div>
 
- <div class="form-group">
+ <div class="form-group" id="tts_announce_row"[#if TTS!="1"#] style="display:none"[#endif#]>
   <label for="tts_announce" class="col-md-6 control-label">
    Анонс для речи:
   </label>

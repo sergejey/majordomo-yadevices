@@ -20,6 +20,18 @@
 <!-- search results (list) -->
 <form action="?" method="post" name="frmList_yastations" style="padding:0px" class="form">
 <table  align=center class="table table-striped">
+ <thead>
+ <tr>
+  <th><#LANG_TITLE#></th>
+  <th>Идентификатор</th>
+  <th><#LANG_TYPE#></th>
+  <th>Состояние</th>
+  <th>Озвучивание событий</th>
+  <th>IP</th>
+  <th><#LANG_UPDATED#></th>
+  <th>&nbsp;</th>
+ </tr>
+ </thead>
 <tbody>
 [#begin RESULT#]
 <tr>
@@ -41,6 +53,11 @@
   [#else IS_ONLINE#]
   <font color="red">OFFLINE</font>
   [#endif#]
+ </td>
+ <td>
+  [#if TTS="0"#]Нет[#endif TTS#]
+  [#if TTS="1"#]Облако<br/><nobr>(&gt;= [#MIN_LEVEL_TEXT#])</nobr>[#endif TTS#]
+  [#if TTS="2"#]Локально<br/><nobr>(&gt;= [#MIN_LEVEL_TEXT#])</nobr>[#endif TTS#]
  </td>
  <td>
   [#IP#]
