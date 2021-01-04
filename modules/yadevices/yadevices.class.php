@@ -7,7 +7,7 @@
 spl_autoload_register(function ($class_name) {
     $path = DIR_MODULES . 'yadevices/' . $class_name . '.php';
     $path = str_replace('\\', '/', $path);
-    include_once $path;
+    @include_once $path;
 });
 
 use \WSSC\WebSocketClient;
@@ -945,7 +945,7 @@ class yadevices extends module
 
     function propertySetHandle($object, $property, $value)
     {
-        $properties = SQLSelect("SELECT yadevices_capabilities.*, yadevices.IOT_ID FROM yadevices_capabilities LEFT JOIN yadevices ON yadevices_capabilities.DEVICE_ID=yadevices.ID WHERE yadevices_capabilities.LINKED_OBJECT LIKE '" . DBSafe($object) . "' AND yadevices_capabilities.LINKED_PROPERTY LIKE '" . DBSafe($property) . "'");
+        $properties = SQLSelect("SELECT yadevices_capabilities.*, yadevices.IOT_ID FROM yadevices_capabilities LEFT JOIN yadevices ON yadevices_capabilities.YADEVICE_ID=yadevices.ID WHERE yadevices_capabilities.LINKED_OBJECT LIKE '" . DBSafe($object) . "' AND yadevices_capabilities.LINKED_PROPERTY LIKE '" . DBSafe($property) . "'");
         $total = count($properties);
         for ($i = 0; $i < $total; $i++) {
             $this->sendValueToYandex($properties[$i]['IOT_ID'], $properties[$i]['TITLE'], $value);
