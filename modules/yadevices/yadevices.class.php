@@ -357,14 +357,14 @@ class yadevices extends module
                                     'type' => 'devices.capabilities.quasar.server_action',
                                     'state' => array(
                                         'instance' => 'phrase_action',
-                                        'value' => '-'
+                                        'value' => 'Сценарий для МДМ. НЕ УДАЛЯТЬ!'
                                     )
                                 )
                             )
                         )
                     ),
                 );
-                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios', 'POST', $payload);
+                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v2/user/scenarios/', 'POST', $payload);
                 if ($result['status'] == 'ok') {
                     $some_added = 1;
                 }
