@@ -10,33 +10,30 @@ $rec = SQLSelectOne("SELECT * FROM $table_name WHERE ID='$id'");
 
 if ($this->mode == 'send_text') {
     $out['CLOUD']=gr('cloud','int');
-    if ($out['CLOUD']) {
-        $result = $this->sendCommandToStationCloud($rec['ID'],gr('text'));
+    $out['TEXT']=gr('text');
+    $out['ID']=$id;
+	
+	$out['SENDAS']=gr('sendas');
+	
+    if ($out['CLOUD'] == 1) {
+		if($out['SENDAS'] == 1) {
+			$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), 'text_action');
+		} else {
+			$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), 'phrase_action');
+		}
     } else {
         $result = $this->sendCommandToStation($rec['ID'],gr('text'));
     }
 
-        if ($result) {
-        $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&ok_msg=".urlencode('Command sent!'));
-    } else {
-        $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&err_msg=".urldecode('Failed to send command'));
-    }
+    // if ($result) {
+        // $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&ok_msg=".urlencode('Command sent!')."#debug");
+    // } else {
+        // $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&err_msg=".urldecode('Failed to send command')."#debug");
+    // }
 }
 
 if ($this->mode == 'update') {
     $ok = 1;
-    //updating '<%LANG_TITLE%>' (varchar, required)
-    /*
- $rec['TITLE']=gr('title');
- if ($rec['TITLE']=='') {
-  $out['ERR_TITLE']=1;
-  $ok=0;
- }
-
-
-
-    */
-
 
     $rec['IP'] = gr('ip');
     $rec['TTS'] = gr('tts', 'int');
@@ -64,6 +61,7 @@ if ($this->mode == 'update') {
         $out['ERR'] = 1;
     }
 }
+
 if (is_array($rec)) {
     foreach ($rec as $k => $v) {
         if (!is_array($v)) {
