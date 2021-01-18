@@ -1,0 +1,61 @@
+<div id="settings_block" style="display:none;margin-bottom: 30px;border: 1px solid #6c13ee;padding: 10px;">
+	<h2 style="margin-top: 0px;">Настройки модуля</h2>
+	<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" style="border-left: 1px solid #730ae7;margin-left: 10px;padding-left: 10px;">
+		<div class="checkbox">
+			<label>
+				<input type="checkbox" name="cycleIsOn" [#if STATUS_CYCLE==1#]checked[#endif#] onclick="if($(this).prop('checked')) { $('#cycleIsOnTime_block').show() } else { $('#cycleIsOnTime_block').hide() }"> Активировать цикл
+				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Модуль будет опрашивать состояние устройств в Яндексе</p>
+			</label>
+			<label id="cycleIsOnTime_block" [#if STATUS_CYCLE!=1#]style="display: none;"[#endif#]>
+				<select class="form-control" name="cycleIsOnTime">
+					<option value="10" [#if RELOAD_TIME==10#]selected[#endif#]>10 сек.</option>
+					<option value="15" [#if RELOAD_TIME==15#]selected[#endif#]>15 сек.</option>
+					<option value="30" [#if RELOAD_TIME==30#]selected[#endif#]>30 сек.</option>
+					<option value="60" [#if RELOAD_TIME==60#]selected[#endif#]>1 мин.</option>
+					<option value="120" [#if RELOAD_TIME==60#]selected[#endif#]>2 мин.</option>
+					<option value="180" [#if RELOAD_TIME==60#]selected[#endif#]>3 мин.</option>
+					<option value="300" [#if RELOAD_TIME==300#]selected[#endif#]>5 мин.</option>
+					<option value="600" [#if RELOAD_TIME==300#]selected[#endif#]>10 мин.</option>
+				</select>
+				<p class="help-block" style="font-size: 1rem;margin-top: 2px;">Чем ниже - тем рискованнее, могут забанить.</p>
+				[#module name="xray" action="service" cycle="yadevices"#]
+			</label>
+		</div>
+		<div class="checkbox">
+			<label>
+				<input type="checkbox" name="reloadAfterOpen" [#if RELOADAFTEROPEN==1#]checked[#endif#]> Обновлять при открытии
+				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Обновлять значения устройств при открытии их страницы</p>
+			</label>
+		</div>
+		<div class="checkbox">
+			<label>
+				<input type="checkbox" name="errorMonitor" [#if ERRORMONITOR==1#]checked[#endif#] onclick="if($(this).prop('checked')) { $('#errorMonitorType_block').show() } else { $('#errorMonitorType_block').hide() }"> Мониторинг ошибок
+				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Отслеживать и показывать ошибки в работе модуля</p>
+			</label>
+			<script>
+			$(function() {
+				errorDefault = '[#ERRORMONITORTYPE#]';
+				if(errorDefault == '0') errorDefault = 1;
+				errorHelpText(errorDefault);
+			}); 
+			function errorHelpText(id) {
+				if(id == '1') {
+					$('#errorMonitorType_help').html('Будут показываться только критические ошибки. DebMes лог вестись <b style="color:red;">не будет</b>');
+				} else {
+					$('#errorMonitorType_help').html('<b style="color:red;">Модуль не будет генерировать критические ошибки</b>, только запись в DebMes.');
+				}
+			}
+			</script>
+			<label id="errorMonitorType_block" [#if ERRORMONITOR!=1#]style="display: none;"[#endif#]>
+				<select class="form-control" name="errorMonitorType" onchange="errorHelpText($(this).val());">
+					<option value="1" [#if ERRORMONITORTYPE==1#]selected[#endif#]>Использовать модуль "Ошибки системы"</option>
+					<option value="2" [#if ERRORMONITORTYPE==2#]selected[#endif#]>Использовать DebMes</option>
+				</select>
+				<p class="help-block" style="font-size: 1rem;margin-top: 2px;" id="errorMonitorType_help"></p>
+			</label>
+		</div>
+		
+		<button type="submit" class="btn btn-success">Сохранить настройки</button>
+		<input type="hidden" name="view_mode" value="update_settings_cycle">
+	</form>
+</div>
