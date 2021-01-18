@@ -1462,7 +1462,7 @@ class yadevices extends module
  yadevices_capabilities: YADEVICE_ID int(10) NOT NULL DEFAULT '0'
  yadevices_capabilities: TITLE varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: VALUE varchar(100) NOT NULL DEFAULT ''
- yadevices_capabilities: READONLY 	int(10) NOT NULL DEFAULT ''
+ yadevices_capabilities: READONLY tinyint(1) NOT NULL DEFAULT 0
  yadevices_capabilities: ALLOWPARAMS varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: LINKED_OBJECT varchar(255) NOT NULL DEFAULT ''
  yadevices_capabilities: LINKED_PROPERTY varchar(255) NOT NULL DEFAULT ''
