@@ -1,13 +1,47 @@
-<table class="table">
-    [#begin RESULT#]
-    <tr>
-        <td>[#TITLE#]</td>
-        <td>[#DEVICE_TYPE#]</td>
-        <td>[#IOT_ID#]</td>
-        <td>[#UPDATED#]</td>
-        <td>
-            <a href="?view_mode=edit_yadevices&id=[#ID#]" class="btn btn-default" title="Edit"><i class="glyphicon glyphicon-pencil"></i></a>
-        </td>
-    </tr>
-    [#end RESULT#]
-</table>
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/station.svg">
+			Управление станциями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/scenario.svg">
+			Управление сценариями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;">
+		<div style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/device.svg">
+			Управление устройствами
+		</div>
+	</div>
+</div>
+
+<br><Br>
+
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+		<div class="table-responsive">
+			<table class="table table-striped table-bordered">
+				<thead>
+					<tr>
+						<th>Название</th>
+						<th>Тип устройства</th>
+						<th>IOT ID</th>
+						<th>Выгружен</th>
+					</tr>
+				</thead>
+				[#begin RESULT#]
+				<tr>
+					<td><a href="?view_mode=edit_yadevices&id=[#ID#]" title="Edit">[#TITLE#]</a></td>
+					<td>[#DEVICE_TYPE#]</td>
+					<td>[#IOT_ID#]</td>
+					<td>[#UPDATED#]</td>
+				</tr>
+				[#end RESULT#]
+			</table>
+		</div>
+	</div>
+</div>

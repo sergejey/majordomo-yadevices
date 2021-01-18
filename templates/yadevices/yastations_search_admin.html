@@ -1,106 +1,69 @@
-<!-- table yastations search -->
-<table width=100% border=0><tr>
-<td valign=top>
-<!-- results -->
-[#if RESULT#]
-<!-- paging -->
-[#if PAGES#]
-<table border=0>
-<td align=right><b>Pages:</b>&nbsp;</td>
-[#begin PREVPAGE#]<td><a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">&lt;&lt;&lt;</a></td>[#end PREVPAGE#]
-<td>
-[#begin PAGES#]
-[#if !SELECTED#]<a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">[#else#]<b>[#endif#][#NUM#]</b></a>
-[#end PAGES#]
-</td>
-[#begin NEXTPAGE#]<td><a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">&gt;&gt;&gt;</a></td>[#end NEXTPAGE#]
-</table>
-[#endif PAGES#]
-<!-- / paging -->
-<!-- search results (list) -->
-<form action="?" method="post" name="frmList_yastations" style="padding:0px" class="form">
-<table  align=center class="table table-striped">
- <thead>
- <tr>
-  <th><#LANG_TITLE#></th>
-  <th>Идентификатор</th>
-  <th><#LANG_TYPE#></th>
-  <th>Состояние</th>
-  <th>Озвучивание событий</th>
-  <th>IP</th>
-  <th><#LANG_UPDATED#></th>
-  <th>&nbsp;</th>
- </tr>
- </thead>
-<tbody>
-[#begin RESULT#]
-<tr>
- <td
-  >
-  <b>
-   [#TITLE#]
-  </a></b>
- </td>
- <td>
-  [#STATION_ID#] ([#IOT_ID#])
- </td>
- <td>
-  [#PLATFORM#]
- </td>
- <td>
-  [#if IS_ONLINE="1"#]
-  <font color="green">ONLINE</font>
-  [#else IS_ONLINE#]
-  <font color="red">OFFLINE</font>
-  [#endif#]
- </td>
- <td>
-  [#if TTS="0"#]Нет[#endif TTS#]
-  [#if TTS="1"#]Облако<br/><nobr>(&gt;= [#MIN_LEVEL_TEXT#])</nobr>[#endif TTS#]
-  [#if TTS="2"#]Локально<br/><nobr>(&gt;= [#MIN_LEVEL_TEXT#])</nobr>[#endif TTS#]
- </td>
- <td>
-  [#IP#]
- </td>
- <td>
-  [#UPDATED#]
- </td>
- <td width="1%" nowrap>
-  <div>
-  [#if "<#ACTION#>"=="admin"#]
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;">
+		<div style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/station.svg">
+			Управление станциями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/scenario.svg">
+			Управление сценариями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/device.svg">
+			Управление устройствами
+		</div>
+	</div>
+</div>
 
-   <a href="?view_mode=edit_yastations&id=[#ID#]" class="btn btn-default" title="Edit"><i class="glyphicon glyphicon-pencil"></i></a>
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	[#if RESULT#]
+		[#begin RESULT#]
+		<div class="col-md-6" style="padding: 15px;">
+			<div class="media" style="cursor: pointer;border: 1px solid #6c13ee;padding: 10px;border-radius: 5px;[#if IS_ONLINE!="1"#]opacity: 0.3;[#endif#]" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=edit_yastations&id=[#ID#]'">
+				<a class="pull-left" href="#">
+					[#if PLATFORM == 'yandexmini'#]
+					<img class="media-object" src="/templates/yadevices/img/cover/yandexmini.png">
+					[#else if PLATFORM == 'yandexstation'#]
+					<img class="media-object" src="/templates/yadevices/img/cover/station.png">
+					[#else if PLATFORM == 'linkplay_a98'#]
+					<img class="media-object" src="/templates/yadevices/img/cover/irbis.png">
+					[#else#]
+					<img class="media-object" src="[#ICON_URL#]">
+					[#endif#]
+				</a>
+				<div class="media-body">
+					<h4 class="media-heading">
+						<i class="glyphicon glyphicon-off" style="color: [#if IS_ONLINE="1"#]green[#else IS_ONLINE#]red[#endif#]"></i>
+						<b>[#TITLE#] ([#PLATFORM#])</b>
+					</h4>
+					<div style="font-size: 1rem;">
+						<b>ID:</b> [#STATION_ID#]<br>
+						<b>IOT ID:</b> [#IOT_ID#]<br>
+						<b>Обновлено:</b> [#UPDATED#]<br>
+						<b>Озвучивание событий:</b> [#if TTS="0"#]Нет[#endif TTS#]
+							[#if TTS="2"#]Облако [#if MIN_LEVEL_TEXT!=''#](&gt;= [#MIN_LEVEL_TEXT#])[#endif#][#endif TTS#]
+							[#if TTS="1"#]Локально [#if MIN_LEVEL_TEXT!=''#](&gt;= [#MIN_LEVEL_TEXT#])[#endif#][#endif TTS#]
+					</div>
+				</div>
+			</div>
+		</div>
+		[#end RESULT#]
+	[#else#]
+	<div class="col-md-12" style="padding: 15px;">
+		<div class="alert alert-warning text-center">
+			Coockie файл загружен, теперь необходимо обновить списов устройств. Если после обновления Яндекс.Устройства так и не появились, то видимо возникла проблема с coockie файлом.
+			<br><br>
+			[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
+			<a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" class="btn btn-success btn-sm" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Обновить устройства</a>
+			<a href="?view_mode=logout" class="btn btn-danger btn-sm" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-log-out"></i> Выйти</a>
+			[#endif#]
+		</div>
+	</div>
+	[#endif#]
+</div>
 
-    <a href="?view_mode=delete_yastations&id=[#ID#]" onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-default" title="Delete"><i class="glyphicon glyphicon-remove"></i></a>
-  [#endif ACTION#]
-  </div>
- </td>
-</tr>
-[#end RESULT#]
-</tbody>
-</table>
-<input type="hidden" name="data_source" value="<#DATA_SOURCE#>">
-<input type="hidden" name="view_mode" value="multiple_yastations">
-</form>
-<!-- / search results (list) -->
-<!-- paging -->
-[#if PAGES#]
-<table border=0>
-<td align=right><b>Pages:</b>&nbsp;</td>
-[#begin PREVPAGE#]<td><a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">&lt;&lt;&lt;</a></td>[#end PREVPAGE#]
-<td>
-[#begin PAGES#]
-[#if !SELECTED#]<a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">[#else#]<b>[#endif#][#NUM#]</b></a>
-[#end PAGES#]
-</td>
-[#begin NEXTPAGE#]<td><a href="?view_mode=<#VIEW_MODE#>&mode=<#MODE#>&save_qry=1&page=[#NUM#]">&gt;&gt;&gt;</a></td>[#end NEXTPAGE#]
-</table>
-[#endif PAGES#]
-<!-- / paging -->
-[#else RESULT#]
-<p>
-<font color="red"><#LANG_NO_RECORDS_FOUND#></font>
-</p>
-[#endif RESULT#]
-<!-- / results -->
-</td></tr></table>
+

@@ -1,80 +1,59 @@
+[#if OAUTH_TOKEN == ''#]
+	[#inc login_form.html#]
+[#else#]
+	<div class="row" style="margin-top: -10px;">
+		<div class="col-md-12" style="color:white;padding-top: 10px;padding-bottom: 10px;border-radius: 5px;background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);">
+			<div class="row">
+				<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12" style="padding-left: 70px;">
+					Привет, [#FULL_NAME#]
+				</div>
+				<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 text-right" style="flex-direction: column;">
+					<a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=7359" target="_blank" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-fire"></i> Баги и обсуждение</a>
+					
+					[#if VIEW_MODE="search_yastations" || VIEW_MODE="" || VIEW_MODE="search_yadevices"#]
+					<a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" onclick="return confirm('Модуль обновляет данные автоматически, выполнение этой команды приведет к тому, что будут удалены все устройства и станции, а также отвязаны все свойства. После удаления, устройства и станции будут выгружены. Вы уверены?')" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Обновить</a>
+					[#endif#]
+					<a href="javascript://" onclick="$('#settings_block').toggle();" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-cog"></i> Настройки</a>
+					<a href="?view_mode=logout" onclick="return confirm('После выхода будут удалены все устройства и станции, а также отвязаны все свойства. Вы уверены?')" style="text-decoration:none;color:white;"><i class="glyphicon glyphicon-log-out"></i> Выход</a>
+				</div>
+			</div>
+		</div>
+		<a href="?">
+			<img style="top: 0px;width: 60px;position: absolute;left: 10px;margin-top: -10px;border: 4px solid white;border-radius: 100px;" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Alisa_Yandex.svg/1200px-Alisa_Yandex.svg.png">
+		</a>
+	</div>
 
-<div class="row">
- <div class="col-md-6">
-  [ <a href="#" onClick="$('#api_settings').toggle();return false;"><#LANG_SETUP#></a> ]
- </div>
- [#if VIEW_MODE=""#]
- <div class="col-md-6">
-  Auth status:
-  [#if LOGIN_STATUS="1"#]
-  <font color="green">OK</font>
-  [#else#]
-  <font color="red">N/A</font>
-  [#endif#]
- </div>
- [#endif VIEW_MODE#]
-</div>
+	[#if COOKIE_FILE != 1#]
+		[#inc need_coockie.html#]
+	[#else#]
+		[#inc settings_page.html#]
+		
+		<div style="margin-bottom: 10px;"></div>
+		
 
-<div style="display:none" id='api_settings'>
-&nbsp;
-<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
-<fieldset>
-<div class="form-group">
- <label class="control-label"[#if ERR_API_USERNAME#] style="color:red;font-weight:bold"[#endif#]>
- Yandex Username:
- </label>
- <div class="controls"><input type="text" name="api_username" value="[#API_USERNAME#]" class="input"></div>
-</div>
-<div class="form-group">
- <label class="control-label"[#if ERR_API_PASSWORD#] style="color:red;font-weight:bold"[#endif#]>
- Yandex Password:
- </label>
- <div class="controls"><input type="password" name="api_password" value="[#API_PASSWORD#]" class="input"></div>
-</div>
-<div class="form-actions">
-<button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_UPDATE#></button>
-<input type="hidden" name="view_mode" value="update_settings">
-<input type="hidden" name="mode" value="update">
-</div>
-</fieldset>
-</form>
-</div>
 
-[#if VIEW_MODE="" || VIEW_MODE="search_yastations" || VIEW_MODE="search_yadevices"#]
-&nbsp;
-<div>
- <a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" class="btn btn-default"><i class="glyphicon glyphicon-refresh"></i> <#LANG_REFRESH#></a>
-</div>
-&nbsp;
+		[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
+			[#inc yastations_search_admin.html#]
+		[#endif VIEW_MODE#]
 
-<ul class="nav nav-tabs">
- <li[#if VIEW_MODE="" || VIEW_MODE="search_yastations"#] class="active"[#endif#]><a href="?view_mode=">Stations</a></li>
- <li[#if VIEW_MODE="search_yadevices"#] class="active"[#endif#]><a href="?view_mode=search_yadevices">Devices</a></li>
-</ul>
-&nbsp;
-[#endif VIEW_MODE#]
+		[#if VIEW_MODE="search_yadevices"#]
+			[#inc yadevices_search_admin.html#]
+		[#endif VIEW_MODE#]
+		
+		[#if VIEW_MODE="search_scenarios"#]
+			[#inc yascenarios_search.html#]
+		[#endif VIEW_MODE#]
 
- [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
-  [#inc yastations_search_admin.html#]
- [#endif VIEW_MODE#]
+		[#if VIEW_MODE="edit_yastations"#]
+			[#inc yastations_edit.html#]
+		[#endif VIEW_MODE#]
 
-[#if VIEW_MODE="search_yadevices"#]
-[#inc yadevices_search_admin.html#]
-[#endif VIEW_MODE#]
+		[#if VIEW_MODE="edit_yadevices"#]
+			[#inc yadevices_edit.html#]
+		[#endif VIEW_MODE#]
 
- <!-- / table yastations search -->
- <!-- table yastations edit -->
- [#if VIEW_MODE="edit_yastations"#]
-   [#inc yastations_edit.html#]
- [#endif VIEW_MODE#]
-
-[#if VIEW_MODE="edit_yadevices"#]
-[#inc yadevices_edit.html#]
-[#endif VIEW_MODE#]
-
- <!-- / table yastations edit -->
- <!-- table yastations view --> 
- [#if VIEW_MODE="view_yastations"#]
-   [#inc yastations_view.html#]
- [#endif VIEW_MODE#]
- <!-- / table yastations view -->
+		[#if VIEW_MODE="view_yastations"#]
+		   [#inc yastations_view.html#]
+		[#endif VIEW_MODE#]
+		[#endif#]
+[#endif#]

@@ -1,187 +1,262 @@
-<h1>[#TITLE#]</h1>
-<!-- Table 'yastations' edit -->
-<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
-[#if OK#]
-<div class="alert alert-success"><#LANG_DATA_SAVED#></div>
-[#endif OK#]
-[#if ERR#]
-<div class="alert alert-danger"><#LANG_FILLOUT_REQURED#></div>
-[#endif ERR#]
-<fieldset>
-[#if ID=""#]
-<legend><#LANG_NEW_RECORD#></legend>
-[#endif ID#]
-<!-- TITLE (varchar) -->
-[#if STATION_ID!=""#]
-<div class="form-group[#if ERR_TITLE#] has-error[#endif#]">
- <label for="station_id" class="col-md-6 control-label">
- Station ID:
- </label>
- <div class="col-md-6">
-  <input id="station_id" name="station_id" value="[#STATION_ID#]" disabled type="text" class="form-control"></div>
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;">
+		<div style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/station.svg">
+			Управление станциями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/scenario.svg">
+			Управление сценариями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;opacity: 0.3;">
+		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/device.svg">
+			Управление устройствами
+		</div>
+	</div>
 </div>
- [#endif STATION_ID#]
 
- [#if IOT_ID!=""#]
- <div class="form-group[#if ERR_TITLE#] has-error[#endif#]">
-  <label for="iot_id" class="col-md-6 control-label">
-   IoT ID:
-  </label>
-  <div class="col-md-6">
-   <input id="iot_id" name="iot_id" value="[#IOT_ID#]" disabled type="text" class="form-control"></div>
- </div>
- [#endif IOT_ID#]
+<div class="row" style="border: 1px solid #6c13ee;margin-top:10px;">
+	<div class="col-md-12">
+		<h2><img src="[#ICON_URL#]"> [#TITLE#]</h2>
+		
+		<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+		[#if OK#]
+			<div class="alert alert-success"><#LANG_DATA_SAVED#></div>
+		[#endif OK#]
+		[#if ERR#]
+			<div class="alert alert-danger"><#LANG_FILLOUT_REQURED#></div>
+		[#endif ERR#]
+		
+		
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">MDM ID / Type</label>
+			<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
+				<input id="station_id" name="station_id" value="[#ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+			</div>
+			<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
+				<input id="station_id" name="station_id" value="[#PLATFORM#]" readonly type="text" class="form-control" onclick="$(this).select();">
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Station ID</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input id="station_id" name="station_id" value="[#STATION_ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IoT ID</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input id="station_id" name="station_id" value="[#IOT_ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Токен</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				[#if DEVICE_TOKEN!=""#]
+					<input id="station_id" name="station_id" value="[#DEVICE_TOKEN#]" readonly type="text" class="form-control" onclick="$(this).select();">
+				[#else#]
+				<p>
+					Необходимо сформировать токен доступа для локального управления колонкой!<br>
+					<a href="?view_mode=generate_dev_token&id=[#ID#]" class="btn btn-primary ">Сформировать токен</a>		
+				</p>
+				[#endif#]
+			</div>
+		</div>
+		<div class="form-group [#if ERR_IP#]has-error[#endif#]">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IP</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input id="ip" name="ip" value="[#IP#]" placeholder="Требуется для локального управления" type="text" class="form-control">
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Озвучивание событий:</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<script type="text/javascript">
+				<!-- function ttsTypeUpdated() { -->
+				 <!-- if ($('input[name="tts"]:checked').val()=='1') { -->
+				  <!-- $('#tts_effect_row').show(); -->
+				  <!-- $('#tts_announce_row').show(); -->
+				 <!-- } else { -->
+				  <!-- $('#tts_effect_row').hide(); -->
+				  <!-- $('#tts_announce_row').hide(); -->
+				 <!-- } -->
+				<!-- } -->
+			   </script>
+				<label class="radio-inline">
+					<input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_NO#>
+				</label>
+				[#if DEVICE_TOKEN!="" AND IP != ""#]
+				<label class="radio-inline">
+					<input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (локально)
+				</label>
+				[#else#]
+				<label class="radio-inline" style="color: gray;" onclick="alert('Недоступно, т.к. не указан IP и не получен токен для устройства.')">
+					<input type="radio" disabled> <#LANG_YES#> (локально)
+				</label>
+				[#endif#]
+				
+				[#if TTS_SCENARIO!=""#]
+				<label class="radio-inline">
+					<input type="radio" name="tts" value="2"[#if TTS="2"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (облако Yandex)
+				</label>
+				[#else#]
+				<label class="radio-inline" style="color: gray;" onclick="alert('Недоступно, т.к. произошла ошибка генерации сценария для облачного управления!')">
+					<input type="radio" disabled> <#LANG_YES#> (облако Yandex)
+				</label>
+				[#endif#]
+				
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Мин. уровень важности:</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input id="min_level_text" placeholder="Например: %ThisComputer.minMsgLevel%" name="min_level_text" value="[#MIN_LEVEL_TEXT#]" type="text" class="form-control">
+				<label class="checkbox-inline">
+					<input type="checkbox" id="" onclick="if($(this).prop('checked')) { $('#min_level_text').val('%ThisComputer.minMsgLevel%') } else { $('#min_level_text').val('') }"> Использовать системный МУВС
+				</label>
+			</div>
+		</div>
+		<div id="tts_effect_row" class="form-group" style="display:none">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12 control-label" style="text-align: left;padding-left: 15px;">Эффект для речи:</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<select name="tts_effect" id="tts_effect" class="form-control">
+					<option value=""><#LANG_NO#></option>
+					<option value="behind_the_wall"[#if TTS_EFFECT="behind_the_wall"#] selected[#endif#]>голос из-за стены</option>
+					<option value="hamster"[#if TTS_EFFECT="hamster"#] selected[#endif#]>голос хомяка</option>
+					<option value="megaphone"[#if TTS_EFFECT="megaphone"#] selected[#endif#]>голос через мегафон</option>
+					<option value="pitch_down"[#if TTS_EFFECT="pitch_down"#] selected[#endif#]>низкий голос</option>
+					<option value="psychodelic"[#if TTS_EFFECT="psychodelic"#] selected[#endif#]>психоделический голос</option>
+					<option value="pulse"[#if TTS_EFFECT="pulse"#] selected[#endif#]>голос с прерываниями</option>
+					<option value="train_announce"[#if TTS_EFFECT="train_announce"#] selected[#endif#]>громкоговоритель на вокзале</option>
+				</select>
+			</div>
+		</div>
+		<div id="tts_announce_row" class="form-group" style="display:none">
+			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12 control-label" style="text-align: left;padding-left: 15px;">Анонс для речи:</label>
+			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input type="text" name="tts_announce" value="[#TTS_ANNOUNCE#]" class="form-control">
+				<div class="help-text">
+					Например: alice-sounds-game-win-1 или alice-sounds-game-8-bit-coin-1<br/>
+					Все доступные значения можно посмотреть на <a href="https://yandex.ru/dev/dialogs/alice/doc/sounds-docpage/" target="_blank">данной странице</a>
+			   </div>
+			</div>
+		</div>
 
- [#if DEVICE_TOKEN!=""#]
- <div class="form-group">
-  <label for="device_token" class="col-md-6 control-label">
-   Device token:
-  </label>
-  <div class="col-md-6">
-   <input id="device_token" name="device_token" value="[#DEVICE_TOKEN#]" disabled type="text" class="form-control">
-  </div>
- </div>
- [#endif#]
 
- <div class="form-group[#if ERR_IP#] has-error[#endif#]">
-  <label for="ip" class="col-md-6 control-label">
-   IP:
-  </label>
-  <div class="col-md-6">
-   <input id="ip" name="ip" value="[#IP#]" type="text" class="form-control"></div>
- </div>
+		<div class="form-group text-center">
+			<button type="submit" name="subm" value="Submit" class="btn btn-success"><i class="glyphicon glyphicon-floppy-saved"></i> <#LANG_SUBMIT#></button>
+			<a href="?" class="btn btn-warning "><i class="glyphicon glyphicon-share-alt"></i> <#LANG_CANCEL#></a>
+			<a href="?view_mode=delete_yastations&id=[#ID#]" onClick="return confirm('Are you sure? Please confirm.')" class="btn btn-danger" title="Delete"><i class="glyphicon glyphicon-remove"></i> Удалить</a>
+			<input type="hidden" name="id" value="<#ID#>">
+			<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+			<input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
+			<input type="hidden" name="mode" value="update">
+		</div>
+	
+		</form>
+		
+		
 
-
- <div class="form-group">
-  <label for="tts" class="col-md-6 control-label">
-   <#LANG_CAN_TTS#>:
-  </label>
-  <div class="col-md-6">
-   <script type="text/javascript">
-    function ttsTypeUpdated() {
-     if ($('input[name="tts"]:checked').val()=='1') {
-      $('#tts_effect_row').show();
-      $('#tts_announce_row').show();
-     } else {
-      $('#tts_effect_row').hide();
-      $('#tts_announce_row').hide();
-     }
-    }
-   </script>
-   <input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_NO#>
-   <input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (локально)
-   <input type="radio" name="tts" value="2"[#if TTS="2"#] checked[#endif#] onclick="ttsTypeUpdated();"> <#LANG_YES#> (облако Yandex)
-   </div>
- </div>
-
-  <div class="form-group[#if ERR_MIN_LEVEL_TEXT#] has-error[#endif#]">
-   <label for="min_level_text" class="col-md-6 control-label">
-    <#LANG_MIN_MSG_LEVEL#>:
-   </label>
-   <div class="col-md-6">
-    <input id="min_level_text" name="min_level_text" value="[#MIN_LEVEL_TEXT#]" type="text" class="form-control">
-    <span class="help-block"><#LANG_EXAMPLE#>: <i>%ThisComputer.minMsgLevel%</i></span>
-   </div>
-  </div>
-
- <div class="form-group" id="tts_effect_row"[#if TTS!="1"#] style="display:none"[#endif#]>
-  <label for="tts_effect" class="col-md-6 control-label">
-   Эффект для речи:
-  </label>
-  <div class="col-md-6">
-   <select name="tts_effect" id="tts_effect" class="form-control">
-    <option value=""><#LANG_NO#></option>
-    <option value="behind_the_wall"[#if TTS_EFFECT="behind_the_wall"#] selected[#endif#]>голос из-за стены</option>
-    <option value="hamster"[#if TTS_EFFECT="hamster"#] selected[#endif#]>голос хомяка</option>
-    <option value="megaphone"[#if TTS_EFFECT="megaphone"#] selected[#endif#]>голос через мегафон</option>
-    <option value="pitch_down"[#if TTS_EFFECT="pitch_down"#] selected[#endif#]>низкий голос</option>
-    <option value="psychodelic"[#if TTS_EFFECT="psychodelic"#] selected[#endif#]>психоделический голос</option>
-    <option value="pulse"[#if TTS_EFFECT="pulse"#] selected[#endif#]>голос с прерываниями</option>
-    <option value="train_announce"[#if TTS_EFFECT="train_announce"#] selected[#endif#]>громкоговоритель на вокзале</option>
-   </select>
-  </div>
- </div>
-
- <div class="form-group" id="tts_announce_row"[#if TTS!="1"#] style="display:none"[#endif#]>
-  <label for="tts_announce" class="col-md-6 control-label">
-   Анонс для речи:
-  </label>
-  <div class="col-md-6">
-   <input type="text" name="tts_announce" value="[#TTS_ANNOUNCE#]" class="form-control">
-   <div class="help-text">
-    Например: alice-sounds-game-win-1 или alice-sounds-game-8-bit-coin-1<br/>
-    Все доступные значения можно посмотреть на <a href="https://yandex.ru/dev/dialogs/alice/doc/sounds-docpage/" target="_blank">данной странице</a>
-   </div>
-  </div>
- </div>
-
-
-<div class="form-group">
-        <div class="col-md-offset-2">
- [#if ID!=""#]
- <button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_SUBMIT#></button>
- [#else ID#]
- <button type="submit" name="subm" value="Add" class="btn btn-primary"><#LANG_ADD#></button>
- [#endif ID#]
- <a href="?" class="btn btn-default "><#LANG_CANCEL#></a>
-<input type="hidden" name="id" value="<#ID#>">
-<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
-<input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
-<input type="hidden" name="mode" value="update">
-        </div>
+	</div>
 </div>
-</fieldset>
-</form>
 
-[#if ID!=""#]
-<hr>
-<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" class="form-inline">
- <fieldset>
-  <div class="form-group">
-   <label for="text" class="col-md-6 control-label">
-    Command:
-   </label>
-   <div class="col-md-6">
-    <input id="text" name="text" value="[#TEXT#]" placeholder="command" type="text" class="form-control"></div>
-  </div>
-  <div class="form-group">
-   <input type="radio" name="cloud" value="0" [#if CLOUD!="1"#] checked[#endif#]> Локально
-   <input type="radio" name="cloud" value="1" [#if CLOUD="1"#] checked[#endif#]> Облако
-  </div>
-  <div class="form-group">
-   <div class="col-lg-offset-3 col-lg-4">
-    <button type="submit" name="subm" value="Submit" class="btn btn-primary"><#LANG_SEND#></button>
-    <input type="hidden" name="id" value="<#ID#>">
-    <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
-    <input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
-    <input type="hidden" name="mode" value="send_text">
-   </div>
-  </div>
- </fieldset>
-</form>
-<hr/>
-Code sample:
-<pre>
- callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'повтори за мной раз-два-три'));
-</pre>
 
-Проговаривание фразы
-<pre>
- callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три'));
-</pre>
+<div class="panel panel-default" style="margin-top: 10px;">
+	<div class="panel-heading" style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;border: 0px;">Тестирование и отладка</div>
+	<div class="panel-body" style="background: url(/templates/yadevices/img/full_cover/[#PLATFORM#].png);background-repeat: no-repeat;background-position: right top;">
+		<form action="?id=<#ID#>" method="post" enctype="multipart/form-data" name="frmEdit" class="form-horizontal">
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Команда:</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<input id="text_cmd_test" style="background: transparent;" name="text" value="[#TEXT#]" placeholder="Введите команду..." type="text" class="form-control">
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Пресеты:</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					<code style="white-space: normal;margin: 0px 5px;" onclick="$('#text_cmd_test').val($(this).text().trim());">
+						Повтори за мной тестовое сообщение
+					</code>
+					<code style="white-space: normal;margin: 0px 5px;" onclick="$('#text_cmd_test').val($(this).text().trim());">
+						громкость 6
+					</code>
+					<code style="white-space: normal;margin: 0px 5px;" onclick="$('#text_cmd_test').val($(this).text().trim());">
+						включи мою музыку
+					</code>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Способ отправки:</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+					[#if DEVICE_TOKEN!="" AND IP != ""#]
+					<label class="radio-inline">
+						<input type="radio" onchange="if($(this).prop('checked')) $('#sendAsOnlyCloud').hide();" name="cloud" value="0" [#if CLOUD=="0"#] checked[#endif#]> Локально
+					</label>
+					[#else#]
+					<label class="radio-inline" style="color: gray;" onclick="alert('Недоступно, т.к. не указан IP и не получен токен для устройства.')">
+						<input type="radio" disabled> Локально
+					</label>
+					[#endif#]
+					
+					[#if TTS_SCENARIO!=""#]
+					<label class="radio-inline">
+						<input onchange="if($(this).prop('checked')) $('#sendAsOnlyCloud').show();" type="radio" name="cloud" value="1" [#if CLOUD=="1"#] checked[#endif#]> Облако
+					</label>
+					[#else#]
+					<label class="radio-inline" style="color: gray;" onclick="alert('Недоступно, т.к. произошла ошибка генерации сценария для облачного управления!')">
+						<input type="radio" disabled> Облако
+					</label>
+					[#endif#]
+				</div>
+			</div>
+			<div class="form-group" id="sendAsOnlyCloud" style="[#if CLOUD!="1"#]display:none;[#endif#]">
+				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Отправить как:</label>
+				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">			
+					<label class="radio-inline">
+						<input type="radio" name="sendas" value="0" [#if SENDAS="0" || SENDAS == ''#] checked[#endif#]> Текст
+					</label>
+					
+					<label class="radio-inline">
+						<input type="radio" name="sendas" value="1" [#if SENDAS="1"#] checked[#endif#]> Команда
+					</label>
+					
+					<p class="help-block" style="font-size: 1rem;margin-top: 5px;">
+						<b>Текст</b>: фраза будет прочитана и Алиса не будет продолжать слушать<br>
+						<b>Команда</b>: переданный текст будет восприниматься как голос, соответственно Алиса будет продолжать диалог<br>
+					</p>
+				</div>
+			</div>
+			<div class="form-group text-center">
+				<button type="submit" name="subm" value="Submit" class="btn btn-success"><i class="glyphicon glyphicon-open"></i> <#LANG_SEND#></button>
+				<input type="hidden" name="id" value="<#ID#>">
+				<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+				<input type="hidden" name="edit_mode" value="<#EDIT_MODE#>">
+				<input type="hidden" name="mode" value="send_text">
+			</div>
+		</form>
+	</div>
+</div>
 
-Добавление эффекта и анонса
-<pre>
- callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три','effect'=>'megaphone','announce'=>'alice-sounds-game-win-1'));
-</pre>
+<div class="panel panel-default" style="margin-top: 10px;">
+	<div class="panel-heading" style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;border: 0px;">Примеры команд API</div>
+	<div class="panel-body">
+		Простой пример
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'повтори за мной раз-два-три'));</pre>
 
-Изменение громкости от 0.1 до 1.0 (на Яндекс.Станции):
-<pre>
- callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>0.5));
-</pre>
- 
-Изменение громкости от 1 до 10 (на Яндекс.Станции Мини):
-<pre>
- callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>6));
-</pre>
-[#endif ID#]
+		Проговаривание фразы
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три'));</pre>
+		<!--
+		Добавление эффекта и анонса 
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'say'=>'раз-два-три','effect'=>'megaphone','announce'=>'alice-sounds-game-win-1'));</pre>
+		--->
+		Изменение громкости от 0.1 до 1.0 (на Яндекс.Станции):
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>0.5));</pre>
+		 
+		Изменение громкости от 1 до 10 (на Яндекс.Станции Мини):
+		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'setVolume','volume'=>6));</pre>
+	</div>
+</div>
