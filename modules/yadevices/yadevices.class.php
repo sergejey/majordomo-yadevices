@@ -194,21 +194,6 @@ class yadevices extends module
 			
 			$token = $this->firstAuth($api_username, $api_password);
 			if($token != '') {
-				//Проверим что БД в норме
-				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='READONLY' AND TABLE_NAME='yadevices_capabilities'");
-				if($fixDB["count(*)"] == 0) {
-					SQLExec('ALTER TABLE yadevices_capabilities ADD READONLY tinyint(1) NOT NULL DEFAULT 0 AFTER VALUE;');
-				}
-				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='ALLOWPARAMS' AND TABLE_NAME='yadevices_capabilities'");
-				if($fixDB["count(*)"] == 0) {
-					SQLExec('ALTER TABLE yadevices_capabilities ADD ALLOWPARAMS varchar(255) NOT NULL AFTER READONLY;');
-				}
-				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='LINKED_METHOD' AND TABLE_NAME='yadevices_capabilities'");
-				if($fixDB["count(*)"] == 0) {
-					SQLExec('ALTER TABLE yadevices_capabilities ADD LINKED_METHOD varchar(255) NOT NULL AFTER LINKED_PROPERTY;');
-				}
-				
-				
 				$this->config['OAUTH_TOKEN'] = $token;
 				
 				require_once('client.php');
