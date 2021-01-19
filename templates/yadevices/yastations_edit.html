@@ -1,17 +1,17 @@
 <div class="row" style="margin-right: -15px;margin-left: -15px;">
-	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;padding-bottom: 5px;">
 		<div style="background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);color: white;padding: 10px;border-radius: 5px;">
 			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/station.svg">
 			Управление станциями
 		</div>
 	</div>
-	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;opacity: 0.3;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;opacity: 0.3;padding-bottom: 5px;">
 		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
 			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/scenario.svg">
 			Управление сценариями
 		</div>
 	</div>
-	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;opacity: 0.3;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;opacity: 0.3;padding-bottom: 5px;">
 		<div style="border: 1px solid #6121ff;padding: 10px;border-radius: 5px;">
 			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/device.svg">
 			Управление устройствами
@@ -60,25 +60,34 @@
 					<input id="station_id" name="station_id" value="[#DEVICE_TOKEN#]" readonly type="text" class="form-control" onclick="$(this).select();">
 				[#else#]
 				<p>
-					Необходимо сформировать токен доступа для локального управления колонкой!<br>
+					[#if FULL_NAME == '[Резервный способ входа]'#]
+						<span style="color: red;">Вам не повезло, вы один из немногих "счастливчиков" у которых с аккаунтом Яндекс что-то не то. =( <br>
+							Возможно вы ввели неверный пароль от аккаунта. Получение токена устройства может не работать, в этом случае у вас остается только облачное управление.
+							Разработчик модуля сейчас пытается найти решение и причину, но пока не нашел =(
+						</span><br>
+					[#else#]
+						Необходимо сформировать токен доступа для локального управления колонкой!<br>
+					[#endif#]
 					<a href="?view_mode=generate_dev_token&id=[#ID#]" class="btn btn-primary ">Сформировать токен</a>		
 				</p>
 				[#endif#]
 			</div>
 		</div>
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2'#]
 		<div class="form-group [#if ERR_IP#]has-error[#endif#]">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IP</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
 				<input id="ip" name="ip" value="[#IP#]" placeholder="Требуется для локального управления" type="text" class="form-control">
 			</div>
 		</div>
+		[#endif#]
 		<div class="form-group">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Озвучивание событий:</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
 				<label class="radio-inline">
 					<input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_NO#>
 				</label>
-				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation'#]
+				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2'#]
 					[#if DEVICE_TOKEN!="" AND IP != ""#]
 					<label class="radio-inline">
 						<input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_YES#> (локально)
