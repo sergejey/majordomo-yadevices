@@ -49,10 +49,8 @@
 					<td style="vertical-align: middle;">[#IS_ACTIVE#]</td>
 					<td style="vertical-align: middle;">[#ALLOWDEVICES#]</td>
 					<td style="vertical-align: middle;" class="text-center">
-						[#if CLOUDSCENARIO != 1#]
-							<!--- <a href="?mode=runScenario&view_mode=search_scenarios&id=[#ID#]" onclick="return confirm('Вы уверены?')" class="btn btn-warning btn-xs">Выполнить</a> --->
-							<a href="?mode=delScenario&view_mode=search_scenarios&id=[#ID#]" onclick="return confirm('Вы уверены?')" class="btn btn-danger btn-xs">Удалить</a>
-						[#endif CLOUDSCENARIO#]
+						<!--- <a href="?mode=runScenario&view_mode=search_scenarios&id=[#ID#]" onclick="return confirm('Вы уверены?')" class="btn btn-warning btn-xs">Выполнить</a> --->
+						<a href="?mode=delScenario&view_mode=search_scenarios&id=[#ID#]" onclick="return confirm('Вы уверены?')" class="btn btn-danger btn-xs">Удалить</a>
 					</td>
 				</tr>
 				[#end RESULT#]
