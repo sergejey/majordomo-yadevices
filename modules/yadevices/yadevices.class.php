@@ -898,34 +898,37 @@ class yadevices extends module
 
     function getDeviceToken($device_id, $platform)
     {
-        //$oauth_token = $this->config['OAUTH_TOKEN'];
+        $oauth_token = $this->config['OAUTH_TOKEN'];
 		
-		// getAuth token
-        $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
-        $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
-        
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
-		
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        $result = curl_exec($YaCurl);
+		if($oauth_token == '') {
+			// getAuth token
+			$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
+			$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
+			
+			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+			
+			$YaCurl = curl_init();
+			curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
+			curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+			//curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+			curl_setopt($YaCurl, CURLOPT_URL, $url);
+			curl_setopt($YaCurl, CURLOPT_POST, false);
+			$result = curl_exec($YaCurl);
 
-        if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
-            $oauth_token = $m[1];
-			$this->config['OAUTH_TOKEN'] = $oauth_token;
-			$this->saveConfig();
-        } else {
-            echo $result;
-            return false;
-        }
-		//dprint('Токен '.$oauth_token, false);
-		//dprint("https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform);
+			if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
+				$oauth_token = $m[1];
+				$this->config['OAUTH_TOKEN'] = $oauth_token;
+				$this->saveConfig();
+			} else {
+				echo $result;
+				return false;
+			}
+			
+			$oauth_token = $this->config['OAUTH_TOKEN'];
+		}
+		
 		
         $url = "https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
 
