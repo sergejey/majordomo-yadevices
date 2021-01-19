@@ -73,19 +73,21 @@
 				[#endif#]
 			</div>
 		</div>
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2'#]
 		<div class="form-group [#if ERR_IP#]has-error[#endif#]">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IP</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
 				<input id="ip" name="ip" value="[#IP#]" placeholder="Требуется для локального управления" type="text" class="form-control">
 			</div>
 		</div>
+		[#endif#]
 		<div class="form-group">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Озвучивание событий:</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
 				<label class="radio-inline">
 					<input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_NO#>
 				</label>
-				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation'#]
+				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2'#]
 					[#if DEVICE_TOKEN!="" AND IP != ""#]
 					<label class="radio-inline">
 						<input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_YES#> (локально)
