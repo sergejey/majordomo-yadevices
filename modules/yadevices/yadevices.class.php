@@ -193,7 +193,22 @@ class yadevices extends module
             //$this->config['API_PASSWORD'] = $api_password;
 			
 			$token = $this->firstAuth($api_username, $api_password);
-			if($token != '') {			
+			if($token != '') {
+				//Проверим что БД в норме
+				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='READONLY' AND TABLE_NAME='yadevices_capabilities'");
+				if($fixDB["count(*)"] == 0) {
+					SQLExec('ALTER TABLE yadevices_capabilities ADD READONLY tinyint(1) NOT NULL DEFAULT 0 AFTER VALUE;');
+				}
+				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='ALLOWPARAMS' AND TABLE_NAME='yadevices_capabilities'");
+				if($fixDB["count(*)"] == 0) {
+					SQLExec('ALTER TABLE yadevices_capabilities ADD ALLOWPARAMS varchar(255) NOT NULL AFTER READONLY;');
+				}
+				$fixDB = SQLSelectOne("SELECT count(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='".DB_NAME."' AND COLUMN_NAME='LINKED_METHOD' AND TABLE_NAME='yadevices_capabilities'");
+				if($fixDB["count(*)"] == 0) {
+					SQLExec('ALTER TABLE yadevices_capabilities ADD LINKED_METHOD varchar(255) NOT NULL AFTER LINKED_PROPERTY;');
+				}
+				
+				
 				$this->config['OAUTH_TOKEN'] = $token;
 				
 				require_once('client.php');
@@ -535,56 +550,7 @@ class yadevices extends module
                         if (!$device_rec['ID']) {
                             $device_rec['IOT_ID'] = $iot_id;
                             $device_rec['ID'] = SQLInsert('yadevices', $device_rec);
-                        } //else {
-                            //SQLUpdate('yadevices', $device_rec);
-                        //}
-						
-                        //$capabilities = $device['capabilities'];
-                        //$properties = $device['properties'];
-						
-						//Статистика/цифры
-						// foreach($properties as $propertie) {
-							// $p_name = $propertie['type'].'.'.$propertie['parameters']['instance'];
-							// $value = $propertie['state']['value'];
-							
-							//Запросим из БД текущие значения
-                            // $p_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $p_name . "' AND READONLY = '1'");
-                            
-							// $p_rec['VALUE'] = $value;
-                            // $p_rec['UPDATED'] = date('Y-m-d H:i:s');
-
-                            // if (!$p_rec['ID']) {
-                                // $p_rec['YADEVICE_ID'] = $device_rec['ID'];
-                                // $p_rec['TITLE'] = $p_name;
-                                // $p_rec['READONLY'] = 1;
-                                // $p_rec['ID'] = SQLInsert('yadevices_capabilities', $p_rec);
-                            // } else {
-                                // SQLUpdate('yadevices_capabilities', $p_rec);
-                            // }
-						// }
-						
-                        // foreach ($capabilities as $capability) {
-                            // $c_type = $capability['type'];
-                            // $value = '';
-							
-                            // if ($c_type == 'devices.capabilities.on_off') {
-                                // $value = (int)$capability['state']['value'];
-                            // }
-							
-                            // $c_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $c_type . "' AND READONLY = '0'");
-                            
-							// $c_rec['VALUE'] = $value;
-                            // $c_rec['UPDATED'] = date('Y-m-d H:i:s');
-							
-                            // if (!$c_rec['ID']) {
-                                // $c_rec['YADEVICE_ID'] = $device_rec['ID'];
-                                // $c_rec['TITLE'] = $c_type;
-								// $p_rec['READONLY'] = 0;
-                                // $c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
-                            // } else {
-                                // SQLUpdate('yadevices_capabilities', $c_rec);
-                            // }
-                        // }
+                        }
 
                         if (preg_match('/^devices.types.smart_speaker/uis', $type)) {
                             $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
