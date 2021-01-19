@@ -178,8 +178,7 @@ class yadevices extends module
      *
      * @access public
      */
-    function admin(&$out)
-    {
+    function admin(&$out) {
         $this->getConfig();
         $out['API_USERNAME'] = $this->config['API_USERNAME'];
         $out['API_PASSWORD'] = $this->config['API_PASSWORD'];
@@ -190,7 +189,7 @@ class yadevices extends module
             global $api_username;
             $this->config['API_USERNAME'] = $api_username;
             global $api_password;
-            //$this->config['API_PASSWORD'] = $api_password;
+            $this->config['API_PASSWORD'] = $api_password;
 			
 			$token = $this->firstAuth($api_username, $api_password);
 			if($token != '') {
@@ -282,6 +281,20 @@ class yadevices extends module
 					return;
 				}
 				
+				//Пытаемся фиксить оаутх токен
+				if($this->config['OAUTH_TOKEN'] == '[NON-TOKEN-ACCOUNT]') {
+					$generateOAUTHToken = $this->fixOAUTHToken();
+					if($generateOAUTHToken != false) {
+						$this->config['OAUTH_TOKEN'] = $generateOAUTHToken;
+						//Запросим еще раз инфо
+						require_once('client.php');
+						$newClient = new Client($generateOAUTHToken);
+						$accountInfo = $newClient->accountStatus();
+						$this->config['FULL_NAME'] = $accountInfo->account->fullName;
+						$this->saveConfig();
+					}
+				}
+				
 				$this->clearAll();
 				
 				$this->refreshStations();
@@ -348,6 +361,31 @@ class yadevices extends module
 		$out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
 		$out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
     }
+	
+	function fixOAUTHToken() {
+		// getAuth token
+		$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
+		$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
+		
+		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		
+		$YaCurl = curl_init();
+		curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
+		curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+		//curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+		curl_setopt($YaCurl, CURLOPT_URL, $url);
+		curl_setopt($YaCurl, CURLOPT_POST, false);
+		$result = curl_exec($YaCurl);
+
+		if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
+			$oauth_token = $m[1];
+			return $oauth_token;
+		} else {
+			return false;
+		}
+	}
 	
 	function getDeviceTokenByHand($id) {
 		$req = SQLSelectOne("SELECT STATION_ID, PLATFORM FROM yastations WHERE ID='" . dbSafe($id) . "'");
@@ -791,27 +829,13 @@ class yadevices extends module
         $this->addScenarios();
     }
 
-    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
-    {
-        $this->getConfig();
-        //dprint($this->config);
-        $token = $this->config['API_TOKEN'];
-
-        //dprint("tryin with token: ".$token,false);
-
+    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0) {
+        if($repeating == 0) $token = $this->getToken();
+		
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
 		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-
-        /*
-        if (preg_match('/devices\/(.+)\/actions/', $url, $m)) {
-            $referer = "https://quasar.yandex.ru/skills/iot/device/" . $m[1] . "?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920//Referer: https://quasar.yandex.ru/skills/iot/device/8f5ccea3-d631-4cfb-9fea-5cc36abba92e?app_id=unknown&app_platform=unknown&app_version_name=unknown&dp=2&lang=ru&model=unknown&os_version=unknown&size=1080x1920";
-            dprint($referer);
-            curl_setopt($YaCurl, CURLOPT_REFERER, $referer);
-        }
-        */
 
         if ($method == 'GET') {
             curl_setopt($YaCurl, CURLOPT_POST, false);
@@ -832,38 +856,27 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
         $result = curl_exec($YaCurl);
-
-        //echo trim($result);exit;
-        //dprint($result,false);
-
+	
         $data = json_decode($result, true);
+
+		
         if (!$repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
-            //dprint("Failed so need another token: ".$result,false);
             $token = $this->getToken();
             if ($token) {
                 $data = $this->apiRequest($url, $method, $params, 1);
             } else {
                 return false;
             }
-        } elseif ($repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
-            //dprint("Failed again: ".$result,false);
         }
+		
         return $data;
     }
 
-    function getToken()
-    {
-        $token = '';
-
-        $Ya_login = $this->config['API_USERNAME'];
-        $Ya_pass = $this->config['API_PASSWORD'];
-
-        $oldToken = $this->config['API_TOKEN'];
-
+    function getToken() {
+		//Получение токенов для отправки запросов в Яндекс
 		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
 
         $YaCurl = curl_init();
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
         curl_setopt($YaCurl, CURLOPT_HEADER, 1);
@@ -875,29 +888,19 @@ class yadevices extends module
         curl_close($YaCurl);
 
         if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
-            //dprint($m,false);
             $token = $m[1];
+			return $token;
         } else {
-            //dprint("basic token failed",false);
-        }
-
-        if ($token) {
-            $this->getConfig();
-            $this->config['API_TOKEN'] = $token;
-            $this->saveConfig();
-        } else {
-			if($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-				registerError('YaDevice -> getToken()', 'Ошибка получения csrfToken токена');
+            if($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
+				registerError('YaDevice -> getToken()', 'Ошибка получения csrfToken2 токена');
 			} else if($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-				DebMes("Ошибка получения csrfToken токена", 'yadevices');
+				DebMes("Ошибка получения csrfToken2 токена", 'yadevices');
 			}
-            $this->config['API_TOKEN'] = '';
+			return false;
         }
-        return $token;
     }
 
-    function getDeviceToken($device_id, $platform)
-    {
+    function getDeviceToken($device_id, $platform) {
         $oauth_token = $this->config['OAUTH_TOKEN'];
 		
 		if($oauth_token == '') {
@@ -947,8 +950,7 @@ class yadevices extends module
 
         curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $header);
         $result = curl_exec($YaCurl);
-		//dprint($result);
-		
+
         $data = json_decode($result, true);
         if ($data['status'] == 'ok' && $data['token']) {
 			//Запишем токен
@@ -1156,10 +1158,10 @@ class yadevices extends module
         $this->sendCloudTTS($station['IOT_ID'], $command, $dopParam);
     }
 
-    function sendCommandToStation($id, $command, $dopParam = 0)
-    {
+    function sendCommandToStation($id, $command, $dopParam = 0) {
         if (!$command) return false;
         $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
+		
         if (!$station['ID'] || !$station['IP']) return false;
 
         if ($station['DEVICE_TOKEN']) {
@@ -1171,26 +1173,13 @@ class yadevices extends module
             if (is_array($result)) {
                 return true;
             }
-        }
-		
-        $this->getToken();
-        $token = $this->getDeviceToken($station['STATION_ID'], $station['PLATFORM']);
-		
-        if (!$token) return false;
-
-        $station['DEVICE_TOKEN'] = $token;
-        SQLUpdate('yastations', $station);
-
-        if ($dopParam && ($command == 'setVolume')) {
-            $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'], $station['IP'], 1961, $dopParam);
         } else {
-            $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'], $station['IP']);
-        }
-        if (is_array($result)) {
-            return true;
-        }
-        return false;
-
+			if($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
+				registerError('YaDevice -> sendCommandToStation()', 'Перед тем, как отправлять команды на станцию - сформируйте токен доступа!');
+			} else if($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+				debMes('sendCommandToStation() -> Перед тем, как отправлять команды на станцию - сформируйте токен доступа!', 'yadevices');
+			}
+		}
     }
 
     function processSubscription($event, $details = '')
