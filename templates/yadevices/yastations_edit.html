@@ -125,17 +125,23 @@
 			</div>
 		</div>
 		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2'#]
+		
 		<div class="form-group">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Плеер для сцены:</label>
 			<div class="col-md-5">
-				[#module name="yadevices" station="20" update="15" zoom="0.7"#] 
+				[#if DEVICE_TOKEN=="" OR IP == ""#]
+					<div style="width: 100%;height: 100%;position: absolute;z-index: 1;background: #ffffffcc;display: flex;align-items: center;justify-content: center;font-size: 1.5rem;padding-right: 30px;text-align: center;font-weight: 600;">Чтобы задействовать плеер - укажите данные IP и сформируйте токен!</div>
+				[#endif#]
+				<div [#if DEVICE_TOKEN=="" OR IP == ""#]style="opacity: 0.2;"[#endif#]>[#module name="yadevices" station="25" bgcolor="0,0,0" update="15" zoom="0.7"#]</div>
 			</div>
-			<div class="col-md-5">
+			<div class="col-md-5" [#if DEVICE_TOKEN=="" OR IP == ""#]style="opacity: 0.2;"[#endif#]>
 				Модуль позволяет организовать простое управление мультимедиа со сцены. Дизайн пока так себе =)<br>
-				<code style="white-space: normal;">[&#35;module name="yadevices" station="[#ID#]" update="3" zoom="0.7"&#35;]</code>
+				<code style="white-space: normal;">[&#35;module name="yadevices" station="[#ID#]" update="3" bgcolor="255,0,0" textcolor="red" zoom="0.7"&#35;]</code>
 				<div style="border-top: 1px solid lightgray;margin-top: 5px;font-size: 1rem;">
 					<b>station</b> - ID станции, которую нужно "слушать"<br>
 					<b>update</b> - время опроса станции<br>
+					<b>bgcolor</b> - RGB цвет для фона<br>
+					<b>textcolor</b> - HEX цвет для текста<br>
 					<b>zoom</b> - размер плеера
 				</div>
 			</div>

@@ -83,6 +83,8 @@ class yadevices extends module
 		global $station;
 		global $update;
 		global $zoom;
+		global $bgcolor;
+		global $textcolor;
 		
 		if (isset($station)) {
             $this->station = $station;
@@ -92,6 +94,12 @@ class yadevices extends module
         }
 		if (isset($zoom)) {
             $this->zoom = $zoom;
+        }
+		if (isset($bgcolor)) {
+            $this->bgcolor = $bgcolor;
+        }
+		if (isset($textcolor)) {
+            $this->textcolor = $textcolor;
         }
 		
         if (isset($id)) {
@@ -279,7 +287,8 @@ class yadevices extends module
 				$directory_cookies = ROOT."cms/cached/yadevices/";
 				
 				if (!file_exists($directory_cookies)) {
-					mkdir($directory_cookies, 0777, true);
+					@mkdir($directory_cookies, 0777, true);
+					if (file_exists($directory_cookies)) @chmod($directory_cookies, 0777);
 				}
 	
 				//move_uploaded_file($file, DOC_ROOT . DIRECTORY_SEPARATOR . 'cms/cached/yadevices/new_yandex_coockie.txt');
@@ -991,8 +1000,25 @@ class yadevices extends module
 		//Функции плеера
 		global $station;
 		if(empty($station)) {
-			$station = $this->station;
+			$station = $this->id;
+			if(empty($station)) {
+				$station = $this->station;
+			}
 		}
+		
+		global $bgcolor;
+		if(empty($bgcolor)) {
+			$bgcolor = $this->bgcolor;
+		}
+		if(!$bgcolor) $bgcolor = '0,0,0';
+		$out['BGCOLOR'] = $bgcolor;
+		
+		global $textcolor;
+		if(empty($textcolor)) {
+			$textcolor = $this->textcolor;
+		}
+		if(!$textcolor) $textcolor = 'white';
+		$out['TEXTCOLOR'] = $textcolor;
 		
 		//if(empty((int)$station)) {
 		//	http_response_code(400);
