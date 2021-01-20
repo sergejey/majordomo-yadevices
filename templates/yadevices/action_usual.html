@@ -1,16 +1,16 @@
 <script>
 //
-function load(station) {
+function load(station, action = '') {
 	$.getJSON({
 		url: '/module/yadevices.html?station='+station+'&ajax=1',
 		success: function(responce) {
 			//console.log(responce);
 			console.log(responce.state.playerState.hasPlay);
 			
-			if(!responce.state.playing) {
-				$('#cover_[#STATION_ID#]').css('background', 'url(https://music.yandex.ru/blocks/meta/i/og-image.png)');
-				$('#cover_[#STATION_ID#]').css('background-repeat', 'no-repeat');
-				$('#cover_[#STATION_ID#]').css('background-size', 'contain');
+			if(!responce.state.playing || action == 'stop') {
+				$('#cover_[#STATION_ID#]').css('background', 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(https://music.yandex.ru/blocks/meta/i/og-image.png) 0% 0% / contain no-repeat');
+				$('#cover_[#STATION_ID#]').css('background-color', 'rgba([#BGCOLOR#],1)');
+				
 				
 				allowBtn('hasPause_[#STATION_ID#]', false);
 				allowBtn('hasPlay_[#STATION_ID#]', true);
@@ -18,7 +18,6 @@ function load(station) {
 				$('#songName_[#STATION_ID#]').text('[#TITLE#]');
 				$('#artistName_[#STATION_ID#]').text('Управление музыкой');
 			} else {
-			
 				//$('#nowPlay').show();
 				
 				songName = responce.state.playerState.title;
@@ -28,9 +27,10 @@ function load(station) {
 
 				$('#songName_[#STATION_ID#]').text(songName);
 				$('#artistName_[#STATION_ID#]').text(artistName);
-				$('#cover_[#STATION_ID#]').css('background', 'url(//'+cover+')');
-				$('#cover_[#STATION_ID#]').css('background-repeat', 'no-repeat');
-				$('#cover_[#STATION_ID#]').css('background-size', 'contain');
+				
+				$('#cover_[#STATION_ID#]').css('background', 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(//'+cover+') 0% 0% / contain no-repeat');
+				$('#cover_[#STATION_ID#]').css('background-color', 'rgba([#BGCOLOR#],1)');
+				
 				
 				allowBtn('hasNext_[#STATION_ID#]', responce.state.playerState.hasNext);
 				allowBtn('hasPause_[#STATION_ID#]', responce.state.playerState.hasPause);
@@ -38,7 +38,8 @@ function load(station) {
 				allowBtn('hasPrev_[#STATION_ID#]', responce.state.playerState.hasPrev);
 			}
 			
-			
+			$('#loader').hide();
+			$('#btn').show();
 		},
 		error: function(responce) {
 			console.log('Ошибка загрузки :(');
@@ -59,6 +60,7 @@ function control(action) {
 		url: '/module/yadevices.html?station=[#STATION_ID#]&ajax=1&control=' + action,
 		success: function(responce) {
 			load([#STATION_ID#]);
+			onOff('0');
 		},
 		error: function(responce) {
 			console.log('Ошибка запроса control() :(');
@@ -66,32 +68,60 @@ function control(action) {
 	});
 }
 
+function onOff(nullstate = '') {
+	
+	if(nullstate == '0') {
+		currState = nullstate;
+	} else {
+		currState = $('#connectState').text();
+	}
+
+	if(currState == '0') {
+		load([#STATION_ID#]);
+		$('#timer').text(setInterval(function() { load([#STATION_ID#]); }, [#UPDATE_TIME#]000));
+		$('#onOffBtn').css('color', 'green');
+		$('#onOffBtn').html('<i id="" style="" class="glyphicon glyphicon-log-in"></i> Подключено');
+		$('#connectState').text('1');
+	} else {
+		clearTimeout($('#timer').text());
+		load([#STATION_ID#], 'stop');
+	
+		$('#onOffBtn').css('color', 'red');
+		$('#onOffBtn').html('<i id="" style="" class="glyphicon glyphicon-log-in"></i> Отключено');
+		
+		$('#connectState').text('0');
+	}
+}
+
 $(function() {
-	load([#STATION_ID#]);
-	setInterval(function() { load([#STATION_ID#]); }, [#UPDATE_TIME#]000);
+	
 });
 
 </script>
 
 <div id="nowPlay">
 	<div style="width: 100%;zoom: [#ZOOM_PLAYER#]">
-		<div style="border-radius: 150px;padding: 10px;border: 1px solid #6c13ee;margin: 5px;height: 100px;">
-			<div ></div>
-			<div id="cover_[#STATION_ID#]" style="background: url(https://music.yandex.ru/blocks/meta/i/og-image.png); background-repeat: no-repeat;background-size: contain;border-radius: 50px 0px 0px 50px;float: left;width: 90px;height: 100%;"></div>
-			<div style="float: left;width: 60%;">
-				<div style="font-size: 2rem;" id="songName_[#STATION_ID#]">[#if TITLE==''#]Я.Устройства[#else#][#TITLE#][#endif#]</div>
-				<div style="font-size: 1rem;" id="artistName_[#STATION_ID#]">Управление музыкой</div>
-				<div style="word-spacing: 20px;">
-					<i id="hasPrev_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('prev');" class="glyphicon glyphicon-fast-backward"></i>
-					<i id="hasPlay_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('play');" class="glyphicon glyphicon-play"></i>
-					<i id="hasPause_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('pause');" class="glyphicon glyphicon-pause"></i>
-					<i id="hasNext_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('next');" class="glyphicon glyphicon-fast-forward"></i>
+		<div id="cover_[#STATION_ID#]" style="background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(https://music.yandex.ru/blocks/meta/i/og-image.png) 0% 0% / contain no-repeat; background-color: rgba([#BGCOLOR#],1); padding: 10px;margin: 5px;height: 150px;">
+			<span id="onOffBtn" onclick="onOff();" style="position: absolute;color: red;font-size: 1.5rem;background: #ffffff9e;padding: 5px;cursor:pointer;"><i id="" style="" class="glyphicon glyphicon-log-in"></i> Отключено</span>
+			<div style="text-align:right;width: 100%;color:[#TEXTCOLOR#]">
+				<div style="font-size: 2.5rem;" id="songName_[#STATION_ID#]">[#if TITLE==''#]Я.Устройства[#else#][#TITLE#][#endif#]</div>
+				<div style="font-size: 1.5rem;" id="artistName_[#STATION_ID#]">Управление музыкой</div>
+				<div style="word-spacing: 20px;margin-top: 35px" id="btn">
+					<i id="hasPrev_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('prev');$('#btn').hide();$('#loader').show();" class="glyphicon glyphicon-fast-backward"></i>
+					<i id="hasPlay_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('play');$('#btn').hide();$('#loader').show();" class="glyphicon glyphicon-play"></i>
+					<i id="hasPause_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('pause');$('#btn').hide();$('#loader').show();" class="glyphicon glyphicon-pause"></i>
+					<i id="hasNext_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('next');$('#btn').hide();$('#loader').show();" class="glyphicon glyphicon-fast-forward"></i>
 					
-					<span style="border-left: 1px solid;margin-left: 10px;margin-right: 20px;font-size: 3rem;"></span>
+					<span style="margin-right: 20px;"></span>
 					
 					<i style="font-size: 3rem;cursor:pointer;" onclick="control('volDown');" class="glyphicon glyphicon-volume-down"></i>
 					<i style="font-size: 3rem;cursor:pointer;" onclick="control('volUp');" class="glyphicon glyphicon-volume-up"></i>
 				</div>
+				<div id="loader" style="display:none;padding: 15px 0px 15px 15px;">
+					<img src="/img/loading.gif"> Загрузка...
+				</div>
+				<div id="connectState" style="display:none;">0</div>
+				<div id="timer" style="display:none;">0</div>
 			</div>
 		</div>
 	</div>
