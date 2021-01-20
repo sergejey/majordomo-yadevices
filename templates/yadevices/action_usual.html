@@ -79,7 +79,7 @@ $(function() {
 			<div ></div>
 			<div id="cover_[#STATION_ID#]" style="background: url(https://music.yandex.ru/blocks/meta/i/og-image.png); background-repeat: no-repeat;background-size: contain;border-radius: 50px 0px 0px 50px;float: left;width: 90px;height: 100%;"></div>
 			<div style="float: left;width: 60%;">
-				<div style="font-size: 2rem;" id="songName_[#STATION_ID#]">[#TITLE#]</div>
+				<div style="font-size: 2rem;" id="songName_[#STATION_ID#]">[#if TITLE==''#]Я.Устройства[#else#][#TITLE#][#endif#]</div>
 				<div style="font-size: 1rem;" id="artistName_[#STATION_ID#]">Управление музыкой</div>
 				<div style="word-spacing: 20px;">
 					<i id="hasPrev_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('prev');" class="glyphicon glyphicon-fast-backward"></i>

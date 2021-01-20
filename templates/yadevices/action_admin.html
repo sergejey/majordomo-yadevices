@@ -12,11 +12,11 @@
 					
 					[#if COOKIE_FILE == 1#]
 						[#if VIEW_MODE="search_yastations" || VIEW_MODE="" || VIEW_MODE="search_yadevices"#]
-							<a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" onclick="return confirm('Модуль обновляет данные автоматически, выполнение этой команды приведет к тому, что будут удалены все устройства и станции, а также отвязаны все свойства. После удаления, устройства и станции будут выгружены. Вы уверены?')" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Обновить</a>
+							<a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Обновить</a>
 						[#endif#]
 						<a href="javascript://" onclick="$('#settings_block').toggle();" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-cog"></i> Настройки</a>
 					[#endif#]
-					<a href="?view_mode=logout" onclick="return confirm('После выхода будут удалены все устройства и станции, а также отвязаны все свойства. Вы уверены?')" style="text-decoration:none;color:white;"><i class="glyphicon glyphicon-log-out"></i> Выход</a>
+					<a href="?view_mode=logout" style="text-decoration:none;color:white;"><i class="glyphicon glyphicon-log-out"></i> Выход</a>
 				</div>
 			</div>
 		</div>

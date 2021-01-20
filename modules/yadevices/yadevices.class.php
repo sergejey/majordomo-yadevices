@@ -236,7 +236,7 @@ class yadevices extends module
 			$this->config['API_USERNAME'] = '';
 			$this->config['API_PASSWORD'] = '';
 			
-			$this->clearAll();
+			//$this->clearAll();
 			
 			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
 			
@@ -309,7 +309,7 @@ class yadevices extends module
 					}
 				}
 				
-				$this->clearAll();
+				//$this->clearAll();
 				
 				$this->refreshStations();
                 $this->refreshDevices();
@@ -556,15 +556,15 @@ class yadevices extends module
 	}
 	
     function refreshDevices() {
-		SQLExec('TRUNCATE TABLE yadevices');
+		//SQLExec('TRUNCATE TABLE yadevices');
 		//Делаем анлинк
-		$req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
+		// $req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
 		
-		foreach($req as $prop) {
-			removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
-		}
+		// foreach($req as $prop) {
+			// removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
+		// }
 		//Чистим таблицу
-		SQLExec('TRUNCATE TABLE yadevices_capabilities');
+		//SQLExec('TRUNCATE TABLE yadevices_capabilities');
 		
         $iot_ids = array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
@@ -831,6 +831,7 @@ class yadevices extends module
                     $rec['STATION_ID'] = $item['id'];
                     $rec['ID'] = SQLInsert('yastations', $rec);
                 }
+                $rec['OWNER'] = $this->config['API_USERNAME'];
                 $rec['TITLE'] = $item['name'];
                 $rec['ICON_URL'] = $item['icon'];
                 $rec['PLATFORM'] = $item['platform'];
@@ -840,6 +841,9 @@ class yadevices extends module
                 SQLUpdate('yastations', $rec);
             }
         }
+		//Удаляем станции не принадлежащие этой учетке
+		SQLExec("DELETE FROM yastations WHERE OWNER != '".$this->config['API_USERNAME']."'");
+		
         $this->addScenarios();
     }
 
@@ -1115,7 +1119,7 @@ class yadevices extends module
     function delete_yadevice($id)
     {
 		//Отвяжемся от свойств
-		$req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
+		$req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != '' AND YADEVICE_ID = '".(int)$id."'");
 		
 		foreach($req as $prop) {
 			removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
@@ -1456,6 +1460,7 @@ class yadevices extends module
         $data = <<<EOD
  yastations: ID int(10) unsigned NOT NULL auto_increment
  yastations: TITLE varchar(255) NOT NULL DEFAULT ''
+ yastations: OWNER varchar(255) NOT NULL DEFAULT ''
  yastations: STATION_ID varchar(100) NOT NULL DEFAULT ''
  yastations: IP varchar(100) NOT NULL DEFAULT ''
  yastations: MIN_LEVEL_TEXT varchar(255) NOT NULL DEFAULT ''
