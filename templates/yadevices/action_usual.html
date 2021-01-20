@@ -1,1 +1,98 @@
-<!--# Action Usual #-->
+<script>
+//
+function load(station) {
+	$.getJSON({
+		url: '/module/yadevices.html?station='+station+'&ajax=1',
+		success: function(responce) {
+			//console.log(responce);
+			console.log(responce.state.playerState.hasPlay);
+			
+			if(!responce.state.playing) {
+				$('#cover_[#STATION_ID#]').css('background', 'url(https://music.yandex.ru/blocks/meta/i/og-image.png)');
+				$('#cover_[#STATION_ID#]').css('background-repeat', 'no-repeat');
+				$('#cover_[#STATION_ID#]').css('background-size', 'contain');
+				
+				allowBtn('hasPause_[#STATION_ID#]', false);
+				allowBtn('hasPlay_[#STATION_ID#]', true);
+				
+				$('#songName_[#STATION_ID#]').text('[#TITLE#]');
+				$('#artistName_[#STATION_ID#]').text('Управление музыкой');
+			} else {
+			
+				//$('#nowPlay').show();
+				
+				songName = responce.state.playerState.title;
+				artistName = responce.state.playerState.subtitle;
+				cover = responce.state.playerState.extra.coverURI;
+				cover = cover.replace(/%%/i, '150x150');;
+
+				$('#songName_[#STATION_ID#]').text(songName);
+				$('#artistName_[#STATION_ID#]').text(artistName);
+				$('#cover_[#STATION_ID#]').css('background', 'url(//'+cover+')');
+				$('#cover_[#STATION_ID#]').css('background-repeat', 'no-repeat');
+				$('#cover_[#STATION_ID#]').css('background-size', 'contain');
+				
+				allowBtn('hasNext_[#STATION_ID#]', responce.state.playerState.hasNext);
+				allowBtn('hasPause_[#STATION_ID#]', responce.state.playerState.hasPause);
+				allowBtn('hasPlay_[#STATION_ID#]', responce.state.playerState.hasPlay);
+				allowBtn('hasPrev_[#STATION_ID#]', responce.state.playerState.hasPrev);
+			}
+			
+			
+		},
+		error: function(responce) {
+			console.log('Ошибка загрузки :(');
+		}
+	});
+}
+
+function allowBtn(btn, value) {
+	if(value) {
+		$('#' + btn).show();
+	} else {
+		$('#' + btn).hide();
+	}
+}
+
+function control(action) {
+	$.getJSON({
+		url: '/module/yadevices.html?station=[#STATION_ID#]&ajax=1&control=' + action,
+		success: function(responce) {
+			load([#STATION_ID#]);
+		},
+		error: function(responce) {
+			console.log('Ошибка запроса control() :(');
+		}
+	});
+}
+
+$(function() {
+	load([#STATION_ID#]);
+	setInterval(function() { load([#STATION_ID#]); }, [#UPDATE_TIME#]000);
+});
+
+</script>
+
+<div id="nowPlay">
+	<div style="width: 100%;zoom: [#ZOOM_PLAYER#]">
+		<div style="border-radius: 150px;padding: 10px;border: 1px solid #6c13ee;margin: 5px;height: 100px;">
+			<div ></div>
+			<div id="cover_[#STATION_ID#]" style="background: url(https://music.yandex.ru/blocks/meta/i/og-image.png); background-repeat: no-repeat;background-size: contain;border-radius: 50px 0px 0px 50px;float: left;width: 90px;height: 100%;"></div>
+			<div style="float: left;width: 60%;">
+				<div style="font-size: 2rem;" id="songName_[#STATION_ID#]">[#TITLE#]</div>
+				<div style="font-size: 1rem;" id="artistName_[#STATION_ID#]">Управление музыкой</div>
+				<div style="word-spacing: 20px;">
+					<i id="hasPrev_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('prev');" class="glyphicon glyphicon-fast-backward"></i>
+					<i id="hasPlay_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('play');" class="glyphicon glyphicon-play"></i>
+					<i id="hasPause_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('pause');" class="glyphicon glyphicon-pause"></i>
+					<i id="hasNext_[#STATION_ID#]" style="font-size: 3rem;cursor:pointer;" onclick="control('next');" class="glyphicon glyphicon-fast-forward"></i>
+					
+					<span style="border-left: 1px solid;margin-left: 10px;margin-right: 20px;font-size: 3rem;"></span>
+					
+					<i style="font-size: 3rem;cursor:pointer;" onclick="control('volDown');" class="glyphicon glyphicon-volume-down"></i>
+					<i style="font-size: 3rem;cursor:pointer;" onclick="control('volUp');" class="glyphicon glyphicon-volume-up"></i>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
