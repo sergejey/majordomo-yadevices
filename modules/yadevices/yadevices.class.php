@@ -79,6 +79,21 @@ class yadevices extends module
         global $view_mode;
         global $edit_mode;
         global $tab;
+		
+		global $station;
+		global $update;
+		global $zoom;
+		
+		if (isset($station)) {
+            $this->station = $station;
+        }
+		if (isset($update)) {
+            $this->update = $update;
+        }
+		if (isset($zoom)) {
+            $this->zoom = $zoom;
+        }
+		
         if (isset($id)) {
             $this->id = $id;
         }
@@ -257,7 +272,7 @@ class yadevices extends module
                 $this->redirect("?tab=" . $this->tab . "&view_mode=" . $this->view_mode);
             }
         }
-		if($this->view_mode == 'upload_coockie') {
+		if($this->view_mode == 'upload_Cookie') {
 			global $file;
 			if(!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '20000') {
 				
@@ -269,7 +284,6 @@ class yadevices extends module
 	
 				//move_uploaded_file($file, DOC_ROOT . DIRECTORY_SEPARATOR . 'cms/cached/yadevices/new_yandex_coockie.txt');
 				copy($file, $directory_cookies.'new_yandex_coockie.txt');
-				
 				//https://iot.quasar.yandex.ru/m/user/scenarios
 				$checkCoockie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
 				
@@ -967,9 +981,77 @@ class yadevices extends module
      *
      * @access public
      */
-    function usual(&$out)
-    {
+    function usual(&$out) {
         $this->admin($out);
+		
+		//Функции плеера
+		global $station;
+		if(empty($station)) {
+			$station = $this->station;
+		}
+		
+		//if(empty((int)$station)) {
+		//	http_response_code(400);
+		//	die();
+		//}
+		
+		$out['STATION_ID'] = $station;
+		global $update;
+		if(empty($update)) {
+			$update = $this->update;
+		}
+		
+		if($update < 1 || $update) $update = 5;
+		$out['UPDATE_TIME'] = $update;
+		
+		global $zoom;
+		if(empty($zoom)) {
+			$zoom = $this->zoom;
+		}
+		$out['ZOOM_PLAYER'] = $zoom;
+		
+		$ajax = gr('ajax');
+		
+		$rec = SQLSelectOne("SELECT TITLE FROM yastations WHERE ID = '".dbSafe($station)."'");
+		$out['TITLE'] = $rec['TITLE'];
+		
+        if ($ajax && $station && $out['TITLE']) {
+            header("HTTP/1.0: 200 OK\n");
+            header('Content-Type: text/html; charset=utf-8');
+			$control = gr('control');
+			
+			if(!empty(strip_tags($control))) {
+				if($control == 'prev') {
+					$cmdToStation = 'предыдущий трек';
+				} else if($control == 'play') {
+					$cmdToStation = 'продолжи песню';
+				} else if($control == 'pause') {
+					$cmdToStation = 'пауза';
+				} else if($control == 'next') {
+					$cmdToStation = 'следующий трек';
+				} else if($control == 'volDown') {
+					$cmdToStation = 'тише';
+				} else if($control == 'volUp') {
+					$cmdToStation = 'громче';
+				}
+				
+				callAPI('/api/module/yadevices','GET',array('station'=>$station,'command'=> $cmdToStation));
+				
+				echo json_encode(array('status' => 'ok'));
+			} else {
+				$rec = SQLSelectOne("SELECT DEVICE_TOKEN, IP FROM yastations WHERE ID = '".dbSafe($station)."'");
+				
+				if(!$rec) {
+					http_response_code(400);
+					die();
+				}
+				
+				$status = $this->getStatus($rec['DEVICE_TOKEN'], $rec['IP']);
+				
+				echo json_encode($status);
+			}
+			exit;
+		}
     }
 
     /**
@@ -1062,6 +1144,7 @@ class yadevices extends module
 //               'text' => $command,
             )
         );
+		
         if ($dopParam && ($command == 'setVolume')) {
             $msg['payload']['command'] = $command;
             $msg['payload']['volume'] = (float)$dopParam;
@@ -1123,8 +1206,7 @@ class yadevices extends module
 
     }
 
-    function getStatus($token, $ip, $port = 1961)
-    {
+    function getStatus($token, $ip, $port = 1961) {
         $clientConfig = new ClientConfig();
         $clientConfig->setHeaders([
             'X-Origin' => 'http://yandex.ru/',
@@ -1160,10 +1242,20 @@ class yadevices extends module
 
     function sendCommandToStation($id, $command, $dopParam = 0) {
         if (!$command) return false;
-        $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
 		
+        $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
         if (!$station['ID'] || !$station['IP']) return false;
+		
+		$this->getToken();
+        $token = $this->getDeviceToken($station['STATION_ID'], $station['PLATFORM']);
+		
+        if (!$token) return false;
 
+        $station['DEVICE_TOKEN'] = $token;
+        SQLUpdate('yastations', $station);
+		
+		
+		
         if ($station['DEVICE_TOKEN']) {
             if ($dopParam && ($command == 'setVolume')) {
                 $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'], $station['IP'], 1961, $dopParam);

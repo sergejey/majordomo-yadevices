@@ -2,20 +2,20 @@
 <div class="alert alert-warning" style="margin-top: 20px;text-align: center;">
 	Что-то не так с вашим логином или паролем, модуль будет использовать резервный способ получения данных. Возможно, вы ввели неверный логин или пароль.
 	<br><br>
-	<span style="color: red;">Пока непонятно, что произошло, после загрузки Coockie файла модуль попробует авторизоваться снова и если все пройдет успешно,
+	<span style="color: red;">Пока непонятно, что произошло, после загрузки Cookie файла модуль попробует авторизоваться снова и если все пройдет успешно,
 	вместо <b>Привет, [Резервный способ входа]</b> будет ваше имя и фамилия.
 	</span>
 </div>
 [#endif#]
 <div class="jumbotron" style="border: 1px solid #6f0dea;border-radius: 5px;background: white;">
-	<h2>Загрузите coockie!</h2>
+	<h2>Загрузите Cookie!</h2>
 	<p style="font-size: 1.4rem;">
-		Для полноценной работы модуля нужны coockie файл с сайта Яндекс. Это нужно для более стабильной работы модуля.
+		Для полноценной работы модуля нужны Cookie файл с сайта Яндекс. Это нужно для более стабильной работы модуля.
 		Раньше файл формировался автоматически, но модуль работал с ошибками.
-		Срок действия coockie - 17 лет, главное не выходить из аккаунта Яндекс.<br>
-		Процедура совпадает с получение coockie в модуле google location. Нужно установить расширение для браузера (<a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=6309&p=123865&hilit=cookies.txt#p123865" target="_blank">Например это</a>) или
+		Срок действия Cookie - 17 лет, главное не выходить из аккаунта Яндекс.<br>
+		Процедура совпадает с получение Cookie в модуле google location. Нужно установить расширение для браузера (<a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=6309&p=123865&hilit=cookies.txt#p123865" target="_blank">Например это</a>) или
 		любое другое аналогичное.
-		<br>Далее, со страницы <a href="https://yandex.ru/quasar/iot/" target="_blank">Yandex IOT</a> скачать coockie и загрузить в модуль.
+		<br>Далее, со страницы <a href="https://yandex.ru/quasar/iot/" target="_blank">Yandex IOT</a> скачать Cookie и загрузить в модуль.
 	</p>
 	<center>
 		[#if UPLOAD_ERROR !=''#]
@@ -91,9 +91,9 @@
 			</div>
 			
 			<div class="text-center" style="margin-top: 15px">
-				<input type="submit" id="coockie_upload" style="display:none;" name="submit" value="Загрузить" class="btn btn-success">
+				<input type="submit" id="Cookie_upload" style="display:none;" name="submit" value="Загрузить" class="btn btn-success">
 			</div>
-			<input type="hidden" name="view_mode" value="upload_coockie">
+			<input type="hidden" name="view_mode" value="upload_Cookie">
 		</form>
 		<script>
 			let inputs = document.querySelectorAll('.input__file');
@@ -107,7 +107,7 @@
 						countFiles = this.files.length;
 					if (countFiles) {
 						label.querySelector('.input__file-button-text').innerText = '<#LANG_NEWSAVERESTORE_CHOUSES_FILES#> ' + countFiles;
-						$('#coockie_upload').show();
+						$('#Cookie_upload').show();
 					} else {
 						label.querySelector('.input__file-button-text').innerText = labelVal;
 					}
