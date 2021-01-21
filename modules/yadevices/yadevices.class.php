@@ -171,13 +171,6 @@ class yadevices extends module
             if ($station['TTS'] == 2 && $station['IOT_ID'] != '') {
                 if ($params['say']) {
                     $msg = $params['say'];
-                    // if ($effect) {
-                        // $msg = '<speaker effect="' . $effect . '">' . $msg;
-                    // }
-                    // if ($announce) {
-                        // if (!preg_match('/\.opus$/', $announce)) $announce .= '.opus';
-                        // $msg = '<speaker audio="' . $announce . '">' . $msg;
-                    // }
                     return $this->sendCloudTTS($station['IOT_ID'], $msg);
                 } else {
                     return $this->sendCloudTTS($station['IOT_ID'], $params['command'], 'text_action');
@@ -238,6 +231,13 @@ class yadevices extends module
         if (isset($this->data_source) && !$_GET['data_source'] && !$_POST['data_source']) {
             $out['SET_DATASOURCE'] = 1;
         }
+		
+		if($this->view_mode == 'refreshScenarios') {
+			$this->addScenarios();
+			
+			$this->redirect("?");
+		}
+		
 		if($this->view_mode == 'logout') {
 			$this->config['OAUTH_TOKEN'] = '';
 			$this->config['FULL_NAME'] = '';
@@ -1069,7 +1069,11 @@ class yadevices extends module
 				
 				echo json_encode(array('status' => 'ok'));
 			} else {
-				$rec = SQLSelectOne("SELECT DEVICE_TOKEN, IP FROM yastations WHERE ID = '".dbSafe($station)."'");
+				$this->getToken();
+				
+				$rec = SQLSelectOne("SELECT IP, PLATFORM, STATION_ID FROM yastations WHERE ID = '".dbSafe($station)."'");
+				
+				$rec['DEVICE_TOKEN'] = $this->getDeviceToken($rec['STATION_ID'], $rec['PLATFORM']);
 				
 				if(!$rec) {
 					http_response_code(400);
@@ -1185,16 +1189,18 @@ class yadevices extends module
         $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
         $client->send(json_encode($msg));
         $result = $client->receive();
+
         $result_data = json_decode($result, true);
 
         if (is_array($result_data)) {
             if (mb_stripos($command, 'повтори за мной') === 0) {
                 while (($status = $this->getStatus($token, $ip, $port)) && is_array($status) && ($status['state']['aliceState'] != 'LISTENING')) {
                     usleep(500000);
-                    //DebMes($status['state']['aliceState']);
-                    if ($status['state']['aliceState'] == 'IDLE') break;
+                    if ($status['state']['aliceState'] == 'IDLE') {
+						break;
+					}
                 }
-                $this->stopListening($token, $ip, $port);
+				$this->stopListening($token, $ip, $port);
             }
             $client->close();
             return $result_data;
@@ -1226,9 +1232,11 @@ class yadevices extends module
 
         $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
         $client->send(json_encode($msg));
-        $client->close();
         $result = $client->receive();
+		$client->close();
         $result_data = json_decode($result, true);
+		//var_dump($result_data);
+		
         if (is_array($result_data)) {
             return $result_data;
         }
@@ -1251,8 +1259,8 @@ class yadevices extends module
 
         $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
         $client->send(json_encode($msg));
+		$result = $client->receive();
         $client->close();
-        $result = $client->receive();
         $result_data = json_decode($result, true);
         //DebMes($result_data['state']['aliceState']);
         if (is_array($result_data)) {

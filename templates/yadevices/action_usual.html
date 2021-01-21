@@ -4,8 +4,8 @@ function load(station, action = '') {
 	$.getJSON({
 		url: '/module/yadevices.html?station='+station+'&ajax=1',
 		success: function(responce) {
-			//console.log(responce);
-			console.log(responce.state.playerState.hasPlay);
+			console.log(responce);
+			//console.log(responce.state.playerState.hasPlay);
 			
 			if(!responce.state.playing || action == 'stop') {
 				$('#cover_[#STATION_ID#]').css('background', 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(https://music.yandex.ru/blocks/meta/i/og-image.png) 0% 0% / contain no-repeat');
