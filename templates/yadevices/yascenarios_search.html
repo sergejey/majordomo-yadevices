@@ -20,7 +20,20 @@
 </div>
 
 
-<br><Br>
+
+[#if RESULT_TIMER#]
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	[#begin RESULT_TIMER#]
+	<div class="col-lg-3 col-md-4 col-sm-2 col-xs-12">
+		<div style="padding: 10px;border: 1px solid red;margin-bottom: 5px;text-align: center;">
+			<div><img src="http://avatars.mds.yandex.net/get-iot/icons-devices-[#DEVICE_TYPE#].svg/orig"></div>
+			<div><b>[#NAME#]</b></div>
+			<div>Запуск [#SCHEDULED_TIME_HUMAN#]</div>
+		</div>
+	</div>
+	[#end RESULT_TIMER#]
+</div>
+[#endif#]
 
 <div class="row" style="margin-right: -15px;margin-left: -15px;">
 	<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">

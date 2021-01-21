@@ -24,12 +24,8 @@ if ($this->mode == 'send_text') {
     } else {
         $result = $this->sendCommandToStation($rec['ID'],gr('text'));
     }
-
-    // if ($result) {
-        // $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&ok_msg=".urlencode('Command sent!')."#debug");
-    // } else {
-        // $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']."&err_msg=".urldecode('Failed to send command')."#debug");
-    // }
+	
+    $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']);
 }
 
 if ($this->mode == 'update') {
