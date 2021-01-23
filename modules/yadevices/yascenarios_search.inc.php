@@ -37,12 +37,14 @@ foreach($data["scenarios"] as $key => $scenarios) {
 	$allowDevice = '';
 }
 
-foreach($data["onetime_scenarios"] as $onetimekey => $onetimescenarios) {
-	$data["onetime_scenarios"][$onetimekey] = array_change_key_case($onetimescenarios, CASE_UPPER);
+if(is_array($data["onetime_scenarios"])) {
+	foreach($data["onetime_scenarios"] as $onetimekey => $onetimescenarios) {
+		$data["onetime_scenarios"][$onetimekey] = array_change_key_case($onetimescenarios, CASE_UPPER);
 
-	if($onetimescenarios["current_timer_value"]) {
-		$data["onetime_scenarios"][$onetimekey]['SCHEDULED_TIME_HUMAN'] = date('d.m.Y H:i:s', time()+$onetimescenarios['current_timer_value']);
-	}	
+		if($onetimescenarios["current_timer_value"]) {
+			$data["onetime_scenarios"][$onetimekey]['SCHEDULED_TIME_HUMAN'] = date('d.m.Y H:i:s', time()+$onetimescenarios['current_timer_value']);
+		}	
+	}
 }
 
 $out['RESULT'] = $data["scenarios"];
