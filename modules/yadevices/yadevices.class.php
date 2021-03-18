@@ -657,21 +657,29 @@ class yadevices extends module
         $some_added = 0;
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
         $scenarios = array();
+		
         if (is_array($data['scenarios'])) {
             foreach ($data['scenarios'] as $scenario) {
                 $scenarios[$this->yandex_decode($scenario['name'])] = $scenario;
             }
         }
         //dprint($scenarios,false);
+		
         $stations = SQLSelect("SELECT * FROM yastations ORDER BY ID");
         foreach ($stations as $station) {
             $station_id = $station['IOT_ID'];
             if (!isset($scenarios[strtolower($station_id)])) {
                 // add scenario
+				$nameEncode = $this->yandex_encode($station_id);
+			
                 $payload = array(
-                    'name' => $this->yandex_encode($station_id),
+                    'name' => $nameEncode,
                     'icon' => 'home',
-                    'trigger_type' => 'scenario.trigger.voice',
+                    //'trigger_type' => 'scenario.trigger.voice',
+					'triggers' => array(array(
+						'type' => 'scenario.trigger.voice',
+						'value' => mb_substr($nameEncode, 4),
+					)),
                     'requested_speaker_capabilities' => array(),
                     'devices' => array(
                         array(
