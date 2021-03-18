@@ -819,7 +819,7 @@ class yadevices extends module
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
         //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
         //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
-		debMes($result);
+
         if (is_array($result) && $result['status'] == 'ok') {
             $payload = array();
             $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
