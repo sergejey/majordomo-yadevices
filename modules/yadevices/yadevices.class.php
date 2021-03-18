@@ -790,10 +790,16 @@ class yadevices extends module
 		
         if (!$station_rec['TTS_SCENARIO']) return;
 
+		$nameEncode = $this->yandex_encode($iot_id);
+		
         $payload = array(
-            'name' => $this->yandex_encode($iot_id),
+            'name' => $nameEncode,
             'icon' => 'home',
-            'trigger_type' => 'scenario.trigger.voice',
+            //'trigger_type' => 'scenario.trigger.voice',
+			'triggers' => array(array(
+                'type' => 'scenario.trigger.voice',
+                'value' => $nameEncode,
+            )),
             'devices' => array(
                 array(
                     'id' => $iot_id,
@@ -813,6 +819,7 @@ class yadevices extends module
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
         //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
         //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
+		debMes($result);
         if (is_array($result) && $result['status'] == 'ok') {
             $payload = array();
             $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
