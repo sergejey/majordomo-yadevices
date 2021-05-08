@@ -657,21 +657,29 @@ class yadevices extends module
         $some_added = 0;
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
         $scenarios = array();
+		
         if (is_array($data['scenarios'])) {
             foreach ($data['scenarios'] as $scenario) {
                 $scenarios[$this->yandex_decode($scenario['name'])] = $scenario;
             }
         }
         //dprint($scenarios,false);
+		
         $stations = SQLSelect("SELECT * FROM yastations ORDER BY ID");
         foreach ($stations as $station) {
             $station_id = $station['IOT_ID'];
             if (!isset($scenarios[strtolower($station_id)])) {
                 // add scenario
+				$nameEncode = $this->yandex_encode($station_id);
+			
                 $payload = array(
-                    'name' => $this->yandex_encode($station_id),
+                    'name' => $nameEncode,
                     'icon' => 'home',
-                    'trigger_type' => 'scenario.trigger.voice',
+                    //'trigger_type' => 'scenario.trigger.voice',
+					'triggers' => array(array(
+						'type' => 'scenario.trigger.voice',
+						'value' => mb_substr($nameEncode, 4),
+					)),
                     'requested_speaker_capabilities' => array(),
                     'devices' => array(
                         array(
@@ -782,10 +790,16 @@ class yadevices extends module
 		
         if (!$station_rec['TTS_SCENARIO']) return;
 
+		$nameEncode = $this->yandex_encode($iot_id);
+		
         $payload = array(
-            'name' => $this->yandex_encode($iot_id),
+            'name' => $nameEncode,
             'icon' => 'home',
-            'trigger_type' => 'scenario.trigger.voice',
+            //'trigger_type' => 'scenario.trigger.voice',
+			'triggers' => array(array(
+                'type' => 'scenario.trigger.voice',
+                'value' => $nameEncode,
+            )),
             'devices' => array(
                 array(
                     'id' => $iot_id,
@@ -805,6 +819,7 @@ class yadevices extends module
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
         //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
         //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
+
         if (is_array($result) && $result['status'] == 'ok') {
             $payload = array();
             $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
@@ -1359,7 +1374,7 @@ class yadevices extends module
 
     function sendValueToYandex($iot_id, $command_type, $value) {
 		$command_type = explode('.', $command_type);
-		
+
         $url = "https://iot.quasar.yandex.ru/m/user/devices/" . $iot_id . "/actions";
         if ($command_type[0].'.'.$command_type[1].'.'.$command_type[2] == 'devices.capabilities.on_off') {
             if ($value) {
@@ -1407,6 +1422,17 @@ class yadevices extends module
 			//debMes(json_encode($data));
 			
 			$result = $this->apiRequest($url, 'POST', $data);
+			return $result;
+		} else if($command_type[0].'.'.$command_type[1].'.'.$command_type[2] == 'devices.capabilities.range') {
+			//Мод, например work_speed
+
+            $data = array('actions' => array(
+                array('type' => $command_type[0].'.'.$command_type[1].'.'.$command_type[2], 'state' => array('instance' => $command_type[3], 'value' => (int)$value),)));
+			
+			
+			//debMes(json_encode($data));
+			$result = $this->apiRequest($url, 'POST', $data);
+			//debMes(json_encode($result));
 			return $result;
 		}
     }
