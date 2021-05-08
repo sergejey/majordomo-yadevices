@@ -1374,7 +1374,7 @@ class yadevices extends module
 
     function sendValueToYandex($iot_id, $command_type, $value) {
 		$command_type = explode('.', $command_type);
-		
+
         $url = "https://iot.quasar.yandex.ru/m/user/devices/" . $iot_id . "/actions";
         if ($command_type[0].'.'.$command_type[1].'.'.$command_type[2] == 'devices.capabilities.on_off') {
             if ($value) {
@@ -1422,6 +1422,17 @@ class yadevices extends module
 			//debMes(json_encode($data));
 			
 			$result = $this->apiRequest($url, 'POST', $data);
+			return $result;
+		} else if($command_type[0].'.'.$command_type[1].'.'.$command_type[2] == 'devices.capabilities.range') {
+			//Мод, например work_speed
+
+            $data = array('actions' => array(
+                array('type' => $command_type[0].'.'.$command_type[1].'.'.$command_type[2], 'state' => array('instance' => $command_type[3], 'value' => (int)$value),)));
+			
+			
+			//debMes(json_encode($data));
+			$result = $this->apiRequest($url, 'POST', $data);
+			//debMes(json_encode($result));
 			return $result;
 		}
     }
