@@ -895,8 +895,13 @@ class yadevices extends module
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, json_encode($params)); //, JSON_UNESCAPED_SLASHES
         }
         //curl_setopt($YaCurl, CURLOPT_HEADER, 1);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
+    	curl_setopt($ch, CURLOPT_VERBOSE, false);
+	    
         $result = curl_exec($YaCurl);
 	
         $data = json_decode($result, true);
@@ -924,8 +929,14 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_HEADER, 1);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    	curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+	curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
+    	curl_setopt($ch, CURLOPT_VERBOSE, false);
+	    
+	curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
+	  
         $result = curl_exec($YaCurl);
         curl_close($YaCurl);
 
@@ -955,11 +966,16 @@ class yadevices extends module
 			$YaCurl = curl_init();
 			curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
 			curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-			curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
 			curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
 			//curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
 			curl_setopt($YaCurl, CURLOPT_URL, $url);
 			curl_setopt($YaCurl, CURLOPT_POST, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+			curl_setopt($ch, CURLOPT_ENCODING, 'gzip');
+			curl_setopt($ch, CURLOPT_VERBOSE, false);
+			
 			$result = curl_exec($YaCurl);
 
 			if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
