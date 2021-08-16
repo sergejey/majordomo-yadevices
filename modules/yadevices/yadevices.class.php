@@ -282,7 +282,7 @@ class yadevices extends module
         }
 		if($this->view_mode == 'upload_Cookie') {
 			global $file;
-			if(!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '20000') {
+			if(!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '100000') {
 				
 				$directory_cookies = ROOT."cms/cached/yadevices/";
 				
@@ -325,7 +325,7 @@ class yadevices extends module
 				
 				$this->redirect("?");
 			} else {
-				$out['UPLOAD_ERROR'] = 'Допускается загрузка текстовых документов размером не более 20кб.';
+				$out['UPLOAD_ERROR'] = 'Допускается загрузка текстовых документов размером не более 100кб.';
 			}
 		}
 		
