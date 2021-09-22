@@ -246,8 +246,8 @@ class yadevices extends module
 			
 			//$this->clearAll();
 			
-			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
-			
+			//$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+			$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
 			@unlink($cookie);
 			
 			$this->saveConfig();
@@ -284,7 +284,9 @@ class yadevices extends module
 			global $file;
 			if(!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '100000') {
 				
-				$directory_cookies = ROOT."cms/cached/yadevices/";
+				//$directory_cookies = ROOT."cms/cached/yadevices/";
+				$directory_cookies = ROOT."modules/yadevices/cookies/";
+				
 				
 				if (!file_exists($directory_cookies)) {
 					@mkdir($directory_cookies, 0777, true);
@@ -297,7 +299,7 @@ class yadevices extends module
 				$checkCoockie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
 				
 				if($checkCoockie['status'] != 'ok') {
-					$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+					$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
 					@unlink($cookie);
 			
 					$out['UPLOAD_ERROR'] = 'Файл который вы загружаете не является Coockie файлом с сайта Яндекс или он устарел.';
@@ -371,7 +373,7 @@ class yadevices extends module
 		}
 		
 		//Проверка существования куки
-		if (file_exists($_SERVER['DOCUMENT_ROOT'].'/cms/cached/yadevices/new_yandex_coockie.txt')) {
+		if (file_exists($_SERVER['DOCUMENT_ROOT'].'/modules/yadevices/cookies/new_yandex_coockie.txt')) {
 			$out['COOKIE_FILE'] = 1;
 		} else {
 			$out['COOKIE_FILE'] = 0;
@@ -390,7 +392,7 @@ class yadevices extends module
 		$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
 		$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
 		
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
 		
 		$YaCurl = curl_init();
 		curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
@@ -876,7 +878,7 @@ class yadevices extends module
 		
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
 
         if ($method == 'GET') {
@@ -921,7 +923,7 @@ class yadevices extends module
 
     function getToken() {
 		//Получение токенов для отправки запросов в Яндекс
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
@@ -961,7 +963,7 @@ class yadevices extends module
 			$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
 			$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
 			
-			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+			$cookie = ROOT . 'modules/yadevices/cookies/new_yandex_coockie.txt';
 			
 			$YaCurl = curl_init();
 			curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
