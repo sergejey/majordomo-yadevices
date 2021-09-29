@@ -34,7 +34,8 @@ $cycleVarName = 'ThisComputer.'.str_replace('.php', '', basename(__FILE__)) . 'R
 while(true) {
 	if ($latest_check_cycle + 15 < time()) {
        $latest_check_cycle = time();
-       saveToCache("MJD:$cycleVarName", $latest_check_cycle);
+       //saveToCache("MJD:$cycleVarName", $latest_check_cycle);
+       setGlobal((str_replace('.php', '', basename(__FILE__))) . 'Run', $latest_check_cycle, 1);
     }
 	
 	if ((time()-$latest_check) > $reloadTime) {
