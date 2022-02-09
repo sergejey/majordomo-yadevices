@@ -450,6 +450,8 @@ class yadevices extends module
 			//Запрашиваем инфу по устройству
 			$data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices/'.$iotID['IOT_ID']);
 			
+			if(!is_array($data)) continue;
+			
 			if($data['state'] == 'online') {
 				$currentStatus = 1;
 			} else {
