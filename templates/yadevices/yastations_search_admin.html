@@ -25,19 +25,12 @@
 		<div class="col-md-6" style="padding: 15px;">
 			<div class="media" style="cursor: pointer;border: 1px solid #6c13ee;padding: 10px;border-radius: 5px;[#if IS_ONLINE!="1"#]opacity: 0.3;[#endif#]" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=edit_yastations&id=[#ID#]'">
 				<a class="pull-left" href="#">
-					[#if PLATFORM == 'yandexmini'#]
-					<img class="media-object" src="/templates/yadevices/img/cover/yandexmini.png">
-					[#else if PLATFORM == 'yandexmicro'#]
-					<img class="media-object" src="/templates/yadevices/img/cover/yandexmicro.png">
-					[#else if PLATFORM == 'yandexstation'#]
-					<img class="media-object" src="/templates/yadevices/img/cover/yandexstation.png">
-					[#else if PLATFORM == 'linkplay_a98'#]
-					<img class="media-object" src="/templates/yadevices/img/cover/linkplay_a98.png">
-					[#else if PLATFORM == 'yandexstation_2'#]
-					<img class="media-object" src="/templates/yadevices/img/cover/yandexstation_2.png">
-					[#else#]
-					<img class="media-object" src="[#ICON_URL#]">
-					[#endif#]
+                                        [#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'linkplay_a98' OR PLATFORM == 'yandexstation_2'#]
+                                        <img class="media-object" src="/templates/yadevices/img/cover/[#PLATFORM#].png">
+                                        [#else#]
+                                        <img class="media-object" src="[#ICON_URL#]">
+                                        [#endif#]
+
 				</a>
 				<div class="media-body">
 					<h4 class="media-heading">
