@@ -496,6 +496,8 @@ class yadevices extends module
 						}
 					} else if($capabilitie['state']['instance'] == 'color') {
 						$value = $capabilitie['state']['value']['id'];
+					} else if($capabilitie['state']['instance'] == 'scene') { //xor2016: добавлена сцена для Я.лампочки
+                                                $value = $capabilitie['state']['value']['id'];
 					} else {
 						if($capabilitie['state']['value']) {
 							$value = $capabilitie['state']['value'];
@@ -511,7 +513,8 @@ class yadevices extends module
 					//debMes("SELECT * FROM yadevices_capabilities WHERE TITLE = '".dbSafe($c_type)."'");
 					
 					if($new_value != $old_value && !empty($req_skills['LINKED_OBJECT']) && !empty($req_skills['LINKED_PROPERTY'])) {
-						setGlobal($req_skills['LINKED_OBJECT'].'.'.$req_skills['LINKED_PROPERTY'], $new_value, 0, $this->name.'.'.$c_type);
+						if($new_value != gg($req_skills['LINKED_OBJECT'].'.'.$req_skills['LINKED_PROPERTY'])) //xor2016: иначе пишется второй раз в свойство
+						    setGlobal($req_skills['LINKED_OBJECT'].'.'.$req_skills['LINKED_PROPERTY'], $new_value, 0, $this->name.'.'.$c_type);
 					}
 					
 					if($new_value != $old_value) {
@@ -674,31 +677,32 @@ class yadevices extends module
                 // add scenario
 				$nameEncode = $this->yandex_encode($station_id);
 			
-                $payload = array(
+                $payload = array( //xor2016: изменения у Яндекса
                     'name' => $nameEncode,
                     'icon' => 'home',
-                    //'trigger_type' => 'scenario.trigger.voice',
+
 					'triggers' => array(array(
 						'type' => 'scenario.trigger.voice',
 						'value' => mb_substr($nameEncode, 4),
 					)),
-                    'requested_speaker_capabilities' => array(),
-                    'devices' => array(
-                        array(
-                            'id' => $station_id,
-                            'capabilities' => array(
-                                array(
-                                    'type' => 'devices.capabilities.quasar.server_action',
-                                    'state' => array(
-                                        'instance' => 'phrase_action',
-                                        'value' => 'Сценарий для МДМ. НЕ УДАЛЯТЬ!'
-                                    )
-                                )
-                            )
-                        )
-                    ),
+		            'steps'=>array (array (
+		                'type'=> 'scenarios.steps.actions',
+		                'parameters'=> array(
+		                    'requested_speaker_capabilities'=> array(),
+		                    'launch_devices'=> array(array(
+		                        'id'=> $station_id,
+		                        'capabilities'=> array(array(
+		                            'type'=> 'devices.capabilities.quasar.server_action',
+		                            'state'=> array(
+		                                'instance'=> 'phrase_action',
+		                                'value'=> 'Сценарий для МДМ. НЕ УДАЛЯТЬ!'
+		                            )
+		                        ))
+		                    ))
+		                )
+		            ))
                 );
-                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v2/user/scenarios/', 'POST', $payload);
+                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/', 'POST', $payload);  //xor2016: изменения у Яндекса
                 if ($result['status'] == 'ok') {
                     $some_added = 1;
                 }
@@ -794,28 +798,29 @@ class yadevices extends module
 
 		$nameEncode = $this->yandex_encode($iot_id);
 		
-        $payload = array(
+        $payload = array( //xor2016: изменения у Яндекса
             'name' => $nameEncode,
             'icon' => 'home',
-            //'trigger_type' => 'scenario.trigger.voice',
 			'triggers' => array(array(
                 'type' => 'scenario.trigger.voice',
                 'value' => $nameEncode,
             )),
-            'devices' => array(
-                array(
-                    'id' => $iot_id,
-                    'capabilities' => array(
-                        array(
+            'steps' => array(array(
+                'type' => 'scenarios.steps.actions',
+                'parameters' => array(
+                    'requested_speaker_capabilities' => array(),
+                    'launch_devices' => array(array(
+                        'id' => $iot_id,
+                        'capabilities' => array(array(
                             'type' => 'devices.capabilities.quasar.server_action',
                             'state' => array(
                                 'instance' => $action,
                                 'value' => $phrase
                             )
-                        )
-                    )
+                        ))
+                    ))
                 )
-            ),
+            ))
         );
         $scenario_id = $station_rec['TTS_SCENARIO'];
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'PUT', $payload);
@@ -1452,7 +1457,16 @@ class yadevices extends module
 			$result = $this->apiRequest($url, 'POST', $data);
 			//debMes(json_encode($result));
 			return $result;
-		}
+		} else if($command_type[0].'.'.$command_type[1].'.'.$command_type[2] == 'devices.capabilities.color_setting') { //xor2016: для Я.Лампочки
+			$mode = $command_type[3];
+			
+            $data = array('actions' => array(
+                array('state' => array('instance' => $mode, 'value' => $value), 'type' => $command_type[0].'.'.$command_type[1].'.'.$command_type[2] )));
+			
+			$result = $this->apiRequest($url, 'POST', $data);
+			return $result;
+        }
+	    
     }
 
     function propertySetHandle($object, $property, $value)
