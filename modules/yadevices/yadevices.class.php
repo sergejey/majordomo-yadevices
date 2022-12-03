@@ -4,6 +4,8 @@
  * greetings to https://github.com/AlexxIT/YandexStation/ :)
  */
 
+Define('YADEVICES_COOKIE_PATH', ROOT."cms/yadevices/cookie.txt");
+
 spl_autoload_register(function ($class_name) {
     $path = DIR_MODULES . 'yadevices/' . $class_name . '.php';
     $path = str_replace('\\', '/', $path);
@@ -38,6 +40,7 @@ class yadevices extends module
         $this->title = "YaDevices";
         $this->module_category = "<#LANG_SECTION_DEVICES#>";
         $this->checkInstalled();
+
     }
 
     /**
@@ -128,6 +131,7 @@ class yadevices extends module
      */
     function run()
     {
+
         $out = array();
         if ($this->action == 'admin') {
             $this->admin($out);
@@ -246,8 +250,7 @@ class yadevices extends module
 			
 			//$this->clearAll();
 			
-			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
-			
+			$cookie = YADEVICES_COOKIE_PATH;
 			@unlink($cookie);
 			
 			$this->saveConfig();
@@ -284,23 +287,14 @@ class yadevices extends module
 			global $file;
 			if(!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '100000') {
 				
-				$directory_cookies = ROOT."cms/cached/yadevices/";
-				
-				if (!file_exists($directory_cookies)) {
-					@mkdir($directory_cookies, 0777, true);
-					if (file_exists($directory_cookies)) @chmod($directory_cookies, 0777);
-				}
-	
-				//move_uploaded_file($file, DOC_ROOT . DIRECTORY_SEPARATOR . 'cms/cached/yadevices/new_yandex_coockie.txt');
-				copy($file, $directory_cookies.'new_yandex_coockie.txt');
+				move_uploaded_file($file, YADEVICES_COOKIE_PATH);
 				//https://iot.quasar.yandex.ru/m/user/scenarios
-				$checkCoockie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
+				$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
 				
-				if($checkCoockie['status'] != 'ok') {
-					$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+				if($checkCookie['status'] != 'ok') {
+					$cookie = YADEVICES_COOKIE_PATH;
 					@unlink($cookie);
-			
-					$out['UPLOAD_ERROR'] = 'Файл который вы загружаете не является Coockie файлом с сайта Яндекс или он устарел.';
+					$out['UPLOAD_ERROR'] = 'Файл который вы загружаете не является Cookie файлом с сайта Яндекс или он устарел.';
 					return;
 				}
 				
@@ -371,7 +365,7 @@ class yadevices extends module
 		}
 		
 		//Проверка существования куки
-		if (file_exists($_SERVER['DOCUMENT_ROOT'].'/cms/cached/yadevices/new_yandex_coockie.txt')) {
+		if (file_exists(YADEVICES_COOKIE_PATH)) {
 			$out['COOKIE_FILE'] = 1;
 		} else {
 			$out['COOKIE_FILE'] = 0;
@@ -390,7 +384,7 @@ class yadevices extends module
 		$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
 		$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
 		
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = YADEVICES_COOKIE_PATH;
 		
 		$YaCurl = curl_init();
 		curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
@@ -883,7 +877,7 @@ class yadevices extends module
 		
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = YADEVICES_COOKIE_PATH;
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
 
         if ($method == 'GET') {
@@ -928,7 +922,7 @@ class yadevices extends module
 
     function getToken() {
 		//Получение токенов для отправки запросов в Яндекс
-		$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+		$cookie = YADEVICES_COOKIE_PATH;
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
@@ -968,7 +962,7 @@ class yadevices extends module
 			$ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
 			$url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
 			
-			$cookie = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+			$cookie = YADEVICES_COOKIE_PATH;
 			
 			$YaCurl = curl_init();
 			curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
@@ -1511,6 +1505,20 @@ class yadevices extends module
     function install($data = '')
     {
         subscribeToEvent($this->name, 'SAY');
+
+        $cookie_dir = dirname(YADEVICES_COOKIE_PATH);
+        if (!is_dir($cookie_dir)) {
+            umask(0);
+            mkdir($cookie_dir,0777);
+        }
+
+        $old_cookie_file = ROOT . 'cms/cached/yadevices/new_yandex_coockie.txt';
+        if (file_exists($old_cookie_file)) {
+            copy($old_cookie_file, YADEVICES_COOKIE_PATH);
+            unlink($old_cookie_file);
+            chmod(YADEVICES_COOKIE_PATH, 0666);
+        }
+
         parent::install();
     }
 

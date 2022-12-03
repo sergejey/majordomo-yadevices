@@ -26,12 +26,36 @@
 	</div>
 
 	[#if COOKIE_FILE != 1#]
+        [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
 		[#inc need_coockie.html#]
-	[#else#]
+        [#endif VIEW_MODE#]
+    [#endif#]
+
 		[#inc settings_page.html#]
 		
 		<div style="margin-bottom: 10px;"></div>
-		
+
+<div class="row" style="margin-right: -15px;margin-left: -15px;">
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode='" style="cursor:pointer;padding-bottom: 5px;">
+		<div  class="ya_nav[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]_selected[#endif#]">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/station.svg">
+			Управление станциями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_scenarios'" style="cursor:pointer;padding-bottom: 5px;">
+		<div class="ya_nav[#if VIEW_MODE="search_scenarios"#]_selected[#endif#]">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/scenario.svg">
+			Управление сценариями
+		</div>
+	</div>
+	<div class="col-md-4 text-center" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=search_yadevices'" style="cursor:pointer;padding-bottom: 5px;">
+		<div class="ya_nav[#if VIEW_MODE="search_yadevices"#]_selected[#endif#]">
+			<img style="background: white;border-radius: 50px;padding: 5px;margin-right: 5px;" src="/templates/yadevices/img/device.svg">
+			Управление устройствами
+		</div>
+	</div>
+</div>
+<div>&nbsp;</div>
 
 
 		[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
@@ -57,5 +81,6 @@
 		[#if VIEW_MODE="view_yastations"#]
 		   [#inc yastations_view.html#]
 		[#endif VIEW_MODE#]
-		[#endif#]
+
+
 [#endif#]
