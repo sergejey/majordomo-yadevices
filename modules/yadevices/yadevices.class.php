@@ -443,7 +443,8 @@ class yadevices extends module
 			$iotID = SQLSelectOne("SELECT IOT_ID FROM yadevices WHERE ID = '".dbSafe($device['YADEVICE_ID'])."'");
 			//Запрашиваем инфу по устройству
 			$data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices/'.$iotID['IOT_ID']);
-			
+
+
 			if(!is_array($data)) continue;
 			
 			if($data['state'] == 'online') {
@@ -576,7 +577,7 @@ class yadevices extends module
 		
         $iot_ids = array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
-		
+
         if (is_array($data['rooms'])) {
             $rooms = $data['rooms'];
             foreach ($rooms as $room) {
@@ -595,6 +596,8 @@ class yadevices extends module
                         if (!$device_rec['ID']) {
                             $device_rec['IOT_ID'] = $iot_id;
                             $device_rec['ID'] = SQLInsert('yadevices', $device_rec);
+                        } else {
+                            SQLUpdate('yadevices',$device_rec);
                         }
 
                         if (preg_match('/^devices.types.smart_speaker/uis', $type)) {
@@ -624,6 +627,8 @@ class yadevices extends module
                 }
             }
         }
+
+        //dprint($iot_ids);
 
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
         $total = count($all_devices);

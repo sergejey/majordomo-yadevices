@@ -2,6 +2,16 @@
 /*
 * @version 0.1 (wizard)
 */
+
+$go_linked_object = gr('go_linked_object');
+$go_linked_property = gr('go_linked_property');
+if ($go_linked_object && $go_linked_property) {
+    $tmp = SQLSelectOne("SELECT ID, YADEVICE_ID FROM yadevices_capabilities WHERE LINKED_OBJECT = '" . DBSafe($go_linked_object) . "' AND LINKED_PROPERTY='" . DBSafe($go_linked_property) . "'");
+    if ($tmp['ID']) {
+        $this->redirect("?id=" . $tmp['ID'] . "&view_mode=edit_yadevices&id=" . $tmp['YADEVICE_ID']);
+    }
+}
+
  global $session;
   if ($this->owner->name=='panel') {
    $out['CONTROLPANEL']=1;
