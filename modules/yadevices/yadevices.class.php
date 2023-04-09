@@ -1382,21 +1382,25 @@ class yadevices extends module
             $message = $details['message'];
             $message = preg_replace('/\?$/', '', $message);
             $qry = "ALLOW_ASK=1";
-            if ($details['target']) {
-                $qry .=" AND yastations.TITLE LIKE '%".DBSafe($details['target'])."%'";
+            if ($details['destination']) {
+                $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
-            $stations = SQLSelect("SELECT * FROM yastations WHERE ".$qry);
+            $stations = SQLSelect("SELECT * FROM yastations WHERE " . $qry);
             foreach ($stations as $station) {
-                callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'попроси навык дом мажордом задать вопрос "' . $message. '"'));
+                callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'попроси навык дом мажордом задать вопрос "' . $message . '"'));
             }
         }
 
-        if ($event == 'SAY') {
+        if ($event == 'SAY' || $event == 'SAYTO') {
             $level = (int)$details['level'];
             $message = $details['message'];
 
             // TTS CLOUD
-            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=2 AND IOT_ID!=''");
+            $qry = "TTS=2 AND IOT_ID!=''";
+            if ($details['destination']) {
+                $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
+            }
+            $stations = SQLSelect("SELECT * FROM yastations WHERE " . $qry);
             foreach ($stations as $station) {
                 $min_level = 0;
                 if ($station['MIN_LEVEL_TEXT'] != '') {
@@ -1411,7 +1415,11 @@ class yadevices extends module
             }
 
             //TTS LOCAL
-            $stations = SQLSelect("SELECT * FROM yastations WHERE TTS=1");
+            $qry = "TTS=1";
+            if ($details['destination']) {
+                $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
+            }
+            $stations = SQLSelect("SELECT * FROM yastations WHERE ".$qry);
             foreach ($stations as $station) {
                 $min_level = 0;
                 if ($station['MIN_LEVEL_TEXT'] != '') {
@@ -1545,6 +1553,7 @@ class yadevices extends module
     function install($data = '')
     {
         subscribeToEvent($this->name, 'SAY');
+        subscribeToEvent($this->name, 'SAYTO');
         subscribeToEvent($this->name, 'ASK');
 
         $cookie_dir = dirname(YADEVICES_COOKIE_PATH);
