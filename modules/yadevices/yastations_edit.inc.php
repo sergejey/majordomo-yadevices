@@ -41,6 +41,8 @@ if ($this->mode == 'update') {
         $rec['TTS_EFFECT']='';
         $rec['TTS_ANNOUNCE']='';
     }
+
+    $rec['ALLOW_ASK'] = gr('allow_ask', 'int');
     //$rec['DEVICE_TOKEN'] = gr('device_token');
 
 
