@@ -103,6 +103,16 @@
 				</label>
 			</div>
 		</div>
+
+	<div class="form-group">
+		<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Использовать для вопросов (ASK):</label>
+		<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
+				<input type="radio" name="allow_ask" value="1"[#if ALLOW_ASK="1"#] checked[#endif#]> <#LANG_YES#>
+				<input type="radio" name="allow_ask" value="0"[#if ALLOW_ASK!="1"#] checked[#endif#]> <#LANG_NO#>
+		</div>
+	</div>
+</div>
+
 		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi'#]
 		
 		<div class="form-group">
