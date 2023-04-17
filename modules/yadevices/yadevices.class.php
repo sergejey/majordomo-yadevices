@@ -239,6 +239,10 @@ class yadevices extends module
             $out['SET_DATASOURCE'] = 1;
         }
 
+        if ($this->view_mode == 'auth') {
+            $this->auth($out);
+        }
+
         if ($this->view_mode == 'refreshScenarios') {
             $this->addScenarios();
 
@@ -380,6 +384,10 @@ class yadevices extends module
         $out['STATUS_CYCLE'] = $this->config['STATUS_CYCLE'];
         $out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
         $out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
+    }
+
+    function auth(&$out) {
+        include_once(DIR_MODULES.'yadevices/auth.inc.php');
     }
 
     function fixOAUTHToken()
@@ -937,6 +945,27 @@ class yadevices extends module
         }
 
         return $data;
+    }
+
+    function getCSRFToken() {
+        $YaCurl = curl_init();
+        curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/am?app_platform=android');
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_HEADER, 1);
+        curl_setopt($YaCurl, CURLOPT_POST, false);
+        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($YaCurl, CURLOPT_VERBOSE, false);
+        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
+        $result = curl_exec($YaCurl);
+        curl_close($YaCurl);
+
+        if (preg_match('/"csrf_token" value="(.+?)"/', $result, $m)) {
+            $token = $m[1];
+            return $token;
+        } else {
+            return false;
+        }
     }
 
     function getToken()

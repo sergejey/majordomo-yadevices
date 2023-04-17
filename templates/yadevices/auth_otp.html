@@ -1,0 +1,26 @@
+<p>
+    Авторизация происходит с помощью одноразового пароля, доступного в приложении Я.Ключ. Пароль действует 30 секунд.
+</p>
+
+<form action="?" method="post" enctype="multipart/form-data">
+    [#if TRACK_ID!=""#]
+    <div class="from-group">
+        <label>Пароль:</label>
+        <input name="otp" type="text" class="form-control">
+    </div>
+    <input type="hidden" name="track_id" value="<#TRACK_ID#>">
+    [#else TRACK_ID#]
+    <div class="from-group">
+        <label>Имя пользователя:</label>
+        <input name="username" type="text" class="form-control">
+    </div>
+    [#endif TRACK_ID#]
+    &nbsp;
+    <div class="form-group">
+        <input type="submit" id="Cookie_upload" name="submit" value="Продолжить" class="btn btn-success">
+        <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
+    </div>
+    <input type="hidden" name="csrf_token" value="<#CSRF_TOKEN#>">
+    <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
+    <input type="hidden" name="type" value="<#TYPE#>">
+</form>

@@ -1,0 +1,62 @@
+<h2>Авторизация</h2>
+[#if ERR_MSG!=""#]
+<div class="alert alert-danger">[#ERR_MSG#]</div>
+[#endif ERR_MSG#]
+
+[#if OK_MSG!=""#]
+<div class="alert alert-success">[#OK_MSG#]</div>
+[#endif OK_MSG#]
+
+[#if TYPE=""#]
+<div>
+    Состояние авторизации:
+    [#if AUTHORIZED_OK="1"#]
+    <span class="label label-success">Авторизовано</span>
+    <sup>
+    <a href="?view_mode=<#VIEW_MODE#>&type=reset" onclick="return confirm('Данные авторизации будут удалены. Продолжить?');">Удалить авторизацию</a>
+    </sup>
+    [#else#]
+    <span class="label label-danger">Не авторизовано</span>
+    [#endif#]
+</div>
+&nbsp;
+<h3>Выберите способ авторизации:</h3>
+<table class="table">
+    <tr>
+        <td>
+            <a href="?view_mode=<#VIEW_MODE#>&type=qr" class="btn btn-default">QR-код</a>
+        </td>
+        <td>
+            Авторизация по QR-коду с помощью приложения Я.Ключ
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <a href="?view_mode=<#VIEW_MODE#>&type=otp" class="btn btn-default">Одноразовый пароль</a>
+        </td>
+        <td>
+            Авторизация с помощью одноразового пароля
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <a href="?view_mode=<#VIEW_MODE#>&type=cookie" class="btn btn-default">Cookie-файл</a>
+        </td>
+        <td>
+            Загрузка cookie-файла
+        </td>
+    </tr>
+</table>
+[#endif TYPE#]
+
+[#if TYPE="otp"#]
+[#inc auth_otp.html#]
+[#endif TYPE#]
+
+[#if TYPE="cookie"#]
+[#inc auth_cookie.html#]
+[#endif TYPE#]
+
+[#if TYPE="qr"#]
+[#inc auth_qr.html#]
+[#endif TYPE#]
