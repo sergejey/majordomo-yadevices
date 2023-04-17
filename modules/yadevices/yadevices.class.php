@@ -1003,21 +1003,96 @@ class yadevices extends module
         }
     }
 
-    function getDeviceToken($device_id, $platform)
+    function getDeviceToken($device_id, $platform, $force = false)
     {
-        $oauth_token = $this->config['OAUTH_TOKEN'];
+        if ($force) {
+            $oauth_token = '';
+        } else {
+            $oauth_token = $this->config['OAUTH_TOKEN'];
+        }
 
         if ($oauth_token == '') {
-            // getAuth token
+
+            $post = array(
+                'client_secret' => 'ad0a908f0aa341a182a37ecd75bc319e',
+                'client_id' => 'c0ebe342af7d48fbbbfcf2d2eedb8f9e',
+            );
+            $postvars = '';
+            foreach($post as $key=>$value) {
+                $postvars .= $key . "=" . urlencode($value) . "&";
+            }
+
+            $cookie_data = LoadFile(YADEVICES_COOKIE_PATH);
+            $new_cookies = array();
+            $lines = explode("\n",$cookie_data);
+            foreach($lines as $line) {
+                if (preg_match('/^(.*?)\.yandex\.ru/',$line)) {
+                    $values = explode("\t",$line);
+                    $new_cookies[]=$values[5].'='.$values[6];
+                }
+            }
+            $cookies_line = implode("; ",$new_cookies);
+            $headers = array(
+                'Ya-Client-Host: passport.yandex.ru',
+                'Ya-Client-Cookie: ' . $cookies_line
+            );
+
+            $YaCurl = curl_init();
+            curl_setopt($YaCurl, CURLOPT_URL, 'https://mobileproxy.passport.yandex.net/1/bundle/oauth/token_by_sessionid');
+            curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($YaCurl, CURLOPT_POST, true);
+            curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
+            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+            $result = curl_exec($YaCurl);
+            curl_close($YaCurl);
+
+            $data = json_decode($result, true);
+
+
+            if ($data['access_token']) {
+                // getAuth token
+                $post = array(
+                    'client_secret' => '53bc75238f0c4d08a118e51fe9203300',
+                    'client_id' => '23cabbbdc6cd418abb4b39c32c41195d',
+                    'grant_type' => 'x-token',
+                    'access_token' => $data['access_token'],
+                );
+                $postvars = '';
+                foreach($post as $key=>$value) {
+                    $postvars .= $key . "=" . urlencode($value) . "&";
+                }
+                $YaCurl = curl_init();
+                curl_setopt($YaCurl, CURLOPT_URL, 'https://oauth.mobile.yandex.net/1/token');
+                curl_setopt($YaCurl, CURLOPT_POST, true);
+                curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
+                curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+                curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+                $result = curl_exec($YaCurl);
+                curl_close($YaCurl);
+
+                $data = json_decode($result,true);
+                if ($data['access_token']) {
+                    $oauth_token = $data['access_token'];
+                    $this->config['OAUTH_TOKEN'] = $oauth_token;
+                    $this->saveConfig();
+                } else {
+                    return false;
+                }
+
+            } else {
+                return false;
+            }
+            /*
             $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
             $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
-
-            $cookie = YADEVICES_COOKIE_PATH;
 
             $YaCurl = curl_init();
             curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
             //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
             curl_setopt($YaCurl, CURLOPT_URL, $url);
             curl_setopt($YaCurl, CURLOPT_POST, false);
@@ -1037,18 +1112,21 @@ class yadevices extends module
                 echo $result;
                 return false;
             }
-
-            $oauth_token = $this->config['OAUTH_TOKEN'];
+            */
         }
 
+
+
+        if (!$oauth_token) {
+            return false;
+        }
 
         $url = "https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_POST, false);
 
@@ -1056,9 +1134,10 @@ class yadevices extends module
         $header[] = 'Content-type: application/json';
         $header[] = 'Authorization: Oauth ' . $oauth_token;
 
-
         curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $header);
         $result = curl_exec($YaCurl);
+
+        //dprint($result);
 
         $data = json_decode($result, true);
         if ($data['status'] == 'ok' && $data['token']) {
