@@ -593,7 +593,6 @@ class yadevices extends module
 
         $iot_ids = array();
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
-
         if (is_array($data['rooms'])) {
             $rooms = $data['rooms'];
             foreach ($rooms as $room) {
@@ -603,6 +602,7 @@ class yadevices extends module
                         $iot_id = $device['id'];
                         $type = $device['type'];
                         $name = $device['name'];
+                        $quasar_id = $device['quasar_info']['device_id'];
                         $iot_ids[] = $iot_id;
 
                         $device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $iot_id . "'");
@@ -618,6 +618,9 @@ class yadevices extends module
 
                         if (preg_match('/^devices.types.smart_speaker/uis', $type)) {
                             $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
+                            if (!$rec['ID'] && $quasar_id) {
+                                $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . DBSafe($quasar_id) . "'");
+                            }
                             if ($rec['ID']) {
                                 $rec['IOT_ID'] = $iot_id;
                                 $rec['UPDATED'] = date('Y-m-d H:i:s');
@@ -634,8 +637,12 @@ class yadevices extends module
             foreach ($speakers as $speaker) {
                 $name = $speaker['name'];
                 $iot_id = $speaker['id'];
+                $quasar_id = $speaker['quasar_info']['device_id'];
                 $iot_ids[] = $iot_id;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
+                if (!$rec['ID'] && $quasar_id) {
+                    $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . DBSafe($quasar_id) . "'");
+                }
                 if ($rec['ID']) {
                     $rec['IOT_ID'] = $iot_id;
                     $rec['UPDATED'] = date('Y-m-d H:i:s');
@@ -643,8 +650,6 @@ class yadevices extends module
                 }
             }
         }
-
-        //dprint($iot_ids);
 
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
         $total = count($all_devices);
@@ -683,15 +688,12 @@ class yadevices extends module
                 $scenarios[$this->yandex_decode($scenario['name'])] = $scenario;
             }
         }
-        //dprint($scenarios,false);
-
         $stations = SQLSelect("SELECT * FROM yastations ORDER BY ID");
         foreach ($stations as $station) {
             $station_id = $station['IOT_ID'];
             if (!isset($scenarios[strtolower($station_id)])) {
                 // add scenario
                 $nameEncode = $this->yandex_encode($station_id);
-
                 $payload = array( //xor2016: изменения у Яндекса
                     'name' => $nameEncode,
                     'icon' => 'home',
@@ -933,6 +935,10 @@ class yadevices extends module
         $result = curl_exec($YaCurl);
 
         $data = json_decode($result, true);
+
+        if (!is_Array($data)) {
+            //dprint($url.':<br/>'.$result,false);
+        }
 
 
         if (!$repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
