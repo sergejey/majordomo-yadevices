@@ -964,6 +964,9 @@ class yadevices extends module
             $token = $m[1];
             return $token;
         } else {
+            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+                DebMes("Failed to get CSRF token:\n" . $result, 'yadevices');
+            }
             return false;
         }
     }
@@ -1028,10 +1031,15 @@ class yadevices extends module
             foreach($lines as $line) {
                 if (preg_match('/^(.*?)\.yandex\.ru/',$line)) {
                     $values = explode("\t",$line);
-                    $new_cookies[]=$values[5].'='.$values[6];
+                    $cookie_title = $values[5];
+                    $cookid_value = $values[6];
+                    if ($cookie_title == 'yaexpflags') continue;
+                    $new_cookies[]=$cookie_title.'='.$cookid_value;
                 }
             }
             $cookies_line = implode("; ",$new_cookies);
+            //dprint($cookie_data, false);
+            //dprint($cookies_line);
             $headers = array(
                 'Ya-Client-Host: passport.yandex.ru',
                 'Ya-Client-Cookie: ' . $cookies_line
@@ -1079,40 +1087,19 @@ class yadevices extends module
                     $this->config['OAUTH_TOKEN'] = $oauth_token;
                     $this->saveConfig();
                 } else {
+                    if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+                        DebMes("Failed to get x-token token:\n" . $result, 'yadevices');
+                    }
                     return false;
                 }
 
             } else {
+                if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+                    DebMes("Failed to get device access token:\n" . $result, 'yadevices');
+                }
                 return false;
             }
-            /*
-            $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
-            $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
 
-            $YaCurl = curl_init();
-            curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
-            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-            //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-            curl_setopt($YaCurl, CURLOPT_URL, $url);
-            curl_setopt($YaCurl, CURLOPT_POST, false);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($YaCurl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-            curl_setopt($YaCurl, CURLOPT_ENCODING, 'gzip');
-            curl_setopt($YaCurl, CURLOPT_VERBOSE, false);
-
-            $result = curl_exec($YaCurl);
-
-            if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
-                $oauth_token = $m[1];
-                $this->config['OAUTH_TOKEN'] = $oauth_token;
-                $this->saveConfig();
-            } else {
-                echo $result;
-                return false;
-            }
-            */
         }
 
 
@@ -1144,8 +1131,13 @@ class yadevices extends module
             //Запишем токен
             SQLExec("UPDATE yastations SET DEVICE_TOKEN = '" . dbSafe($data['token']) . "' WHERE STATION_ID = '" . dbSafe($device_id) . "'");
             return $data['token'];
+        } else {
+            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+                DebMes("Failed to get device local token:\n" . $result, 'yadevices');
+            }
+            return false;
         }
-        return false;
+
     }
 
     /**
