@@ -775,7 +775,7 @@ class yadevices extends module
 
     function delScenario($scenario_id)
     {
-        $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'DELETE', array('Access-Control-Allow-Methods: DELETE'));
+        $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'DELETE');
 
         if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
             if ($result["status"] == 'error') {
@@ -902,62 +902,72 @@ class yadevices extends module
 
     function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
     {
-        if ($repeating == 0) $token = $this->getToken();
+
+        $debug = 0;
+
+        if ($method != 'GET' && !$this->csrf_token) {
+            $token = $this->getToken();
+        }
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, $url);
-        $cookie = YADEVICES_COOKIE_PATH;
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
         if ($method == 'GET') {
             curl_setopt($YaCurl, CURLOPT_POST, false);
         } else {
-            curl_setopt($YaCurl, CURLOPT_HTTPHEADER, array(
+            $headers = array(
                 'Content-type: application/json',
-                'x-csrf-token:' . $token
-            ));
-
+                'x-csrf-token: ' . $this->csrf_token
+            );
+            curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($YaCurl, CURLOPT_POST, true);
             if ($method != 'POST') {
                 curl_setopt($YaCurl, CURLOPT_CUSTOMREQUEST, $method);
             } else {
-                curl_setopt($YaCurl, CURLOPT_POST, true);
+                //curl_setopt($YaCurl, CURLOPT_POST, true);
             }
-            curl_setopt($YaCurl, CURLOPT_POSTFIELDS, json_encode($params)); //, JSON_UNESCAPED_SLASHES
+            if (is_array($params)) {
+                curl_setopt($YaCurl, CURLOPT_POSTFIELDS, json_encode($params)); //, JSON_UNESCAPED_SLASHES
+            }
         }
-        //curl_setopt($YaCurl, CURLOPT_HEADER, 1);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($YaCurl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        curl_setopt($YaCurl, CURLOPT_ENCODING, 'gzip');
-        curl_setopt($YaCurl, CURLOPT_VERBOSE, false);
+        curl_setopt($YaCurl, CURLINFO_HEADER_OUT, true);
+        //curl_setopt($YaCurl, CURLOPT_HEADER, true);
 
         $result = curl_exec($YaCurl);
+        $info = curl_getinfo($YaCurl);
+        curl_close($YaCurl);
 
+        $request_headers = $info['request_header'];
+        if ($debug) {
+            dprint("REQUEST HEADERS:",false);
+            dprint($request_headers,false);
+        }
+        $result_code = $info['http_code'];
         $data = json_decode($result, true);
 
-        if (!is_Array($data)) {
-            //dprint($url.':<br/>'.$result,false);
+        if (!is_array($data) && $debug) {
+            dprint($method." ".$url.'<br/>'.$result,false);
         }
 
-
-        if (!$repeating && ($data['code'] != 'BAD_REQUEST') && (!is_array($data) || $data['status'] == 'error' || trim($result) == 'Unauthorized')) {
-            $token = $this->getToken();
-            if ($token) {
-                $data = $this->apiRequest($url, $method, $params, 1);
-            } else {
-                return false;
+        if (!$repeating &&
+            ($data['code'] != 'BAD_REQUEST') &&
+            ($result_code==403 || $data['status'] == 'error')
+        ) {
+            if ($debug) {
+                dprint("REPEATING: ".$method." ".$url,false);
             }
+            $this->csrf_token = '';
+            $data = $this->apiRequest($url, $method, $params, 1);
         }
-
         return $data;
     }
 
-    function getCSRFToken() {
+    function getCSRFToken($cookie_file = YADEVICES_COOKIE_PATH) {
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/am?app_platform=android');
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie_file);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie_file);
         curl_setopt($YaCurl, CURLOPT_HEADER, 1);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
@@ -977,14 +987,13 @@ class yadevices extends module
         }
     }
 
-    function getToken()
+    function getToken($url = 'https://yandex.ru/quasar/iot')
     {
         //Получение токенов для отправки запросов в Яндекс
-        $cookie = YADEVICES_COOKIE_PATH;
-
         $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://yandex.ru/quasar/iot');
+        curl_setopt($YaCurl, CURLOPT_URL, $url);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
         curl_setopt($YaCurl, CURLOPT_HEADER, 1);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
@@ -1001,6 +1010,7 @@ class yadevices extends module
 
         if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
             $token = $m[1];
+            $this->csrf_token = $token;
             return $token;
         } else {
             if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
@@ -1044,8 +1054,6 @@ class yadevices extends module
                 }
             }
             $cookies_line = implode("; ",$new_cookies);
-            //dprint($cookie_data, false);
-            //dprint($cookies_line);
             $headers = array(
                 'Ya-Client-Host: passport.yandex.ru',
                 'Ya-Client-Cookie: ' . $cookies_line

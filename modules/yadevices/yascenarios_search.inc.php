@@ -4,11 +4,11 @@ if ($this->owner->name == 'panel') {
     $out['CONTROLPANEL'] = 1;
 }
 
-if ($this->mode = 'runScenario' && !empty(strip_tags($this->id))) {
+if ($this->mode == 'runScenario' && !empty(strip_tags($this->id))) {
     $this->runScenario(strip_tags($this->id));
 }
 
-if ($this->mode = 'delScenario' && !empty(strip_tags($this->id))) {
+if ($this->mode == 'delScenario' && !empty(strip_tags($this->id))) {
     $this->delScenario(strip_tags($this->id));
 }
 

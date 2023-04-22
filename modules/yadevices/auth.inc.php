@@ -19,6 +19,7 @@ if ($type == 'reset') {
 }
 
 if ($type == 'otp') {
+    $use_cookie_file = YADEVICES_COOKIE_PATH.'_otp';
     $track_id = gr('track_id');
     if ($track_id) {
         $otp = gr('otp');
@@ -38,12 +39,13 @@ if ($type == 'otp') {
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
             $result = curl_exec($YaCurl);
             curl_close($YaCurl);
             $data = json_decode($result, true);
             if ($data['status']=='ok' || $data['errors'][0]=='account.auth_passed') {
+                rename($use_cookie_file, YADEVICES_COOKIE_PATH);
                 $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
                 if ($checkCookie['status'] != 'ok') {
                     @unlink(YADEVICES_COOKIE_PATH);
@@ -60,7 +62,7 @@ if ($type == 'otp') {
     } else {
         $username = gr('username');
         if ($username) {
-            $csrf_token = $this->getCSRFToken();
+            $csrf_token = $this->getCSRFToken($use_cookie_file);
             if ($csrf_token!='') {
                 $out['CSRF_TOKEN'] = $csrf_token;
                 $post = array(
@@ -76,9 +78,10 @@ if ($type == 'otp') {
                 curl_setopt($YaCurl, CURLOPT_POST, true);
                 curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
                 curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-                curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+                curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
+                curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
                 $result = curl_exec($YaCurl);
+
                 curl_close($YaCurl);
                 $data = json_decode($result, true);
                 if ($data['status']=='ok') {
@@ -97,6 +100,7 @@ if ($type == 'otp') {
 }
 
 if ($type == 'qr') {
+    $use_cookie_file = YADEVICES_COOKIE_PATH.'_qr';
     $track_id = gr('track_id');
     if ($track_id) {
         $csrf_token = gr('csrf_token');
@@ -113,18 +117,18 @@ if ($type == 'qr') {
         $url = 'https://passport.yandex.ru/auth/magic/status/';
 
         curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0');
         curl_setopt($YaCurl, CURLOPT_POST, true);
         curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
         $result = curl_exec($YaCurl);
         curl_close($YaCurl);
 
         $data = json_decode($result, true);
 
         if ($data['status']=='ok' || $data['errors'][0]=='account.auth_passed') {
+            rename($use_cookie_file, YADEVICES_COOKIE_PATH);
             $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
             if ($checkCookie['status'] != 'ok') {
                 @unlink(YADEVICES_COOKIE_PATH);
@@ -142,7 +146,7 @@ if ($type == 'qr') {
         $out['CSRF_TOKEN'] = $csrf_token;
 
     } else {
-        $csrf_token = $this->getCSRFToken();
+        $csrf_token = $this->getCSRFToken($use_cookie_file);
         if ($csrf_token) {
             $post = array(
                 'csrf_token' => $csrf_token,
@@ -159,8 +163,8 @@ if ($type == 'qr') {
             curl_setopt($YaCurl, CURLOPT_POST, true);
             curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
+            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
             $result = curl_exec($YaCurl);
             curl_close($YaCurl);
 
