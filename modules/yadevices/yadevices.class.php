@@ -932,6 +932,8 @@ class yadevices extends module
         }
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLINFO_HEADER_OUT, true);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
         //curl_setopt($YaCurl, CURLOPT_HEADER, true);
 
         $result = curl_exec($YaCurl);
@@ -1067,6 +1069,8 @@ class yadevices extends module
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
             $result = curl_exec($YaCurl);
             curl_close($YaCurl);
 
@@ -1092,6 +1096,8 @@ class yadevices extends module
                 curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
                 curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+                curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
                 $result = curl_exec($YaCurl);
                 curl_close($YaCurl);
 
@@ -1130,6 +1136,8 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_POST, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
 
         $header = array();
         $header[] = 'Content-type: application/json';

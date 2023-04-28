@@ -122,6 +122,8 @@ if ($type == 'qr') {
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
         curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
         $result = curl_exec($YaCurl);
         curl_close($YaCurl);
 
@@ -165,6 +167,8 @@ if ($type == 'qr') {
             curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
             curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
             $result = curl_exec($YaCurl);
             curl_close($YaCurl);
 
