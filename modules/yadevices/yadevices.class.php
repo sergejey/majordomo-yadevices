@@ -1128,7 +1128,7 @@ class yadevices extends module
             return false;
         }
 
-        $url = "https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
+        $url = "https://quasar.yandex.net/extapi/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
 
         $YaCurl = curl_init();
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
