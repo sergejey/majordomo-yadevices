@@ -17,7 +17,8 @@ include_once(DIR_MODULES . 'yadevices/yadevices.class.php');
 
 $yadevices = new yadevices();
 
-$checked_time = 0;
+$latest_check_cycle = 0;
+$latest_check = 0;
 
 echo date("H:i:s") . " running " . basename(__FILE__) . PHP_EOL;
 

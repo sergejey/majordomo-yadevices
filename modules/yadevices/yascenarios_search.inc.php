@@ -28,6 +28,7 @@ if (is_array($data['scenarios'])) {
             $data["scenarios"][$key]['IS_ACTIVE'] = 'Отключен';
         }
 
+		$allowDevice = '';
         foreach ($scenarios["devices"] as $devices) {
             $allowDevice .= $devices . ', ';
         }
@@ -37,7 +38,7 @@ if (is_array($data['scenarios'])) {
     $out['RESULT'] = $data["scenarios"];
 }
 
-if (is_array($data["onetime_scenarios"])) {
+if (isset($data["onetime_scenarios"]) && is_array($data["onetime_scenarios"])) {
     foreach ($data["onetime_scenarios"] as $onetimekey => $onetimescenarios) {
         $data["onetime_scenarios"][$onetimekey] = array_change_key_case($onetimescenarios, CASE_UPPER);
 
