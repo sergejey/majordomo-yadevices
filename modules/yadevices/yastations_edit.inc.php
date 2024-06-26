@@ -73,7 +73,7 @@ if (is_array($rec)) {
     }
 }
 
-if ($rec['ID'] && $rec['MIN_LEVEL'] && !$rec['MIN_LEVEL_TEXT']) {
+if (isset($rec['ID']) && isset($rec['MIN_LEVEL']) && !isset($rec['MIN_LEVEL_TEXT'])) {
     $rec['MIN_LEVEL_TEXT']=$rec['MIN_LEVEL'];
 }
 
