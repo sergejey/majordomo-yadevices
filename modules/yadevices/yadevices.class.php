@@ -163,10 +163,10 @@ class yadevices extends module
 
         DebMes("API call: " . json_encode($params), 'yadevices');
 
-        if ($params['station'] && ($params['command'] || $params['say'])) {
+        if ($params['station'] && (isset($params['command']) || isset($params['say']))) {
             $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$params['station']);
-            $effect = $params['effect'];
-            $announce = $params['announce'];
+            $effect = isset($params['effect']) ? $params['effect'] : '';
+            $announce = isset($params['announce']) ? $params['announce'] : '';
             if (!$effect && $station['TTS_EFFECT']) {
                 $effect = $station['TTS_EFFECT'];
             }
@@ -403,7 +403,7 @@ class yadevices extends module
         curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
         curl_setopt($YaCurl, CURLOPT_URL, $url);
         curl_setopt($YaCurl, CURLOPT_POST, false);
         $result = curl_exec($YaCurl);
@@ -462,7 +462,7 @@ class yadevices extends module
 
             if (!is_array($data)) continue;
 
-            if ($data['state'] == 'online') {
+            if (isset($data['state']) && $data['state'] == 'online') {
                 $currentStatus = 1;
             } else {
                 $currentStatus = 0;
@@ -477,16 +477,18 @@ class yadevices extends module
                     'instance' => 'online',
                 ],
             ];
-
-            array_push($data["properties"], $onlineArray);
+			
+			if(isset($data["properties"])){
+				array_push($data["properties"], $onlineArray);
+			}
 
             //Циклом пройдемся по всем умениям
-            if (is_array($data["capabilities"])) {
+            if (isset($data["capabilities"]) && is_array($data["capabilities"])) {
                 foreach ($data["capabilities"] as $capabilitie) {
                     if ($capabilitie['type'] == 'devices.capabilities.on_off') {
                         $c_type = $capabilitie['type'];
                     } else {
-                        if ($capabilitie['state']['instance']) {
+                        if (isset($capabilitie['state']['instance'])) {
                             $c_type = $capabilitie['type'] . '.' . $capabilitie['state']['instance'];
                         } else if ($capabilitie['parameters']['instance']) {
                             $c_type = $capabilitie['type'] . '.' . $capabilitie['parameters']['instance'];
@@ -498,23 +500,25 @@ class yadevices extends module
                     $req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = '" . dbSafe($device['YADEVICE_ID']) . "'");
 
                     //Основные умения, меняем значение
-                    if (is_bool($capabilitie['state']['value']) == true) {
-                        if ($capabilitie['state']['value'] == true) {
-                            $value = 1;
-                        } else {
-                            $value = 0;
-                        }
-                    } else if ($capabilitie['state']['instance'] == 'color') {
-                        $value = $capabilitie['state']['value']['id'];
-                    } else if ($capabilitie['state']['instance'] == 'scene') { //xor2016: добавлена сцена для Я.лампочки
-                        $value = $capabilitie['state']['value']['id'];
+                    if (isset($capabilitie['state']['value'])){
+						if(is_bool($capabilitie['state']['value']) == true) {
+							if ($capabilitie['state']['value'] == true) {
+								$value = 1;
+							} else {
+								$value = 0;
+							}
+						} else if (isset($capabilitie['state']['instance'])){
+							if($capabilitie['state']['instance']== 'color') {
+								$value = $capabilitie['state']['value']['id'];
+							} else if ($capabilitie['state']['instance']== 'scene') { //xor2016: добавлена сцена для Я.лампочки
+								$value = $capabilitie['state']['value']['id'];
+							}
+						} else {
+							$value = $capabilitie['state']['value'];
+						}  
                     } else {
-                        if ($capabilitie['state']['value']) {
-                            $value = $capabilitie['state']['value'];
-                        } else {
-                            $value = '?';
-                        }
-                    }
+						$value = '?';
+					}
 
                     $new_value = $value;
                     $old_value = $req_skills['VALUE'];
@@ -546,7 +550,7 @@ class yadevices extends module
             }
 
             //Значения датчиков
-            if (is_array($data["properties"])) {
+            if (isset($data["properties"]) && is_array($data["properties"])) {
                 foreach ($data["properties"] as $propertie) {
                     $p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
 
@@ -683,7 +687,7 @@ class yadevices extends module
         $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
         $scenarios = array();
 
-        if (is_array($data['scenarios'])) {
+        if (isset($data['scenarios']) && is_array($data['scenarios'])) {
             foreach ($data['scenarios'] as $scenario) {
                 $scenarios[$this->yandex_decode($scenario['name'])] = $scenario;
             }
@@ -720,7 +724,7 @@ class yadevices extends module
                     ))
                 );
                 $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/', 'POST', $payload);  //xor2016: изменения у Яндекса
-                if ($result['status'] == 'ok') {
+                if (isset($result['status']) && $result['status'] == 'ok') {
                     $some_added = 1;
                 }
             } else {
@@ -905,7 +909,7 @@ class yadevices extends module
 
         $debug = 0;
 
-        if ($method != 'GET' && !$this->csrf_token) {
+        if ($method != 'GET' && !isset($this->csrf_token)) {
             $token = $this->getToken();
         }
 
@@ -940,7 +944,7 @@ class yadevices extends module
         $info = curl_getinfo($YaCurl);
         curl_close($YaCurl);
 
-        $request_headers = $info['request_header'];
+        $request_headers = isset($info['request_header']) ? $info['request_header'] : '';
         if ($debug) {
             dprint("REQUEST HEADERS:",false);
             dprint($request_headers,false);
@@ -953,8 +957,8 @@ class yadevices extends module
         }
 
         if (!$repeating &&
-            ($data['code'] != 'BAD_REQUEST') &&
-            ($result_code==403 || $data['status'] == 'error')
+            (!isset($data['code']) || $data['code']!= 'BAD_REQUEST') &&   
+            ($result_code==403 || (isset($data['status']) && $data['status'] == 'error'))
         ) {
             if ($debug) {
                 dprint("REPEATING: ".$method." ".$url,false);
@@ -1191,7 +1195,7 @@ class yadevices extends module
 
         global $textcolor;
         if (empty($textcolor)) {
-            $textcolor = $this->textcolor;
+            $textcolor = isset($this->textcolor) ? $this->textcolor : '';
         }
         if (!$textcolor) $textcolor = 'white';
         $out['TEXTCOLOR'] = $textcolor;
@@ -1519,7 +1523,7 @@ class yadevices extends module
 
             // TTS CLOUD
             $qry = "TTS=2 AND IOT_ID!=''";
-            if ($details['destination']) {
+            if (isset($details['destination'])) {
                 $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
             $stations = SQLSelect("SELECT * FROM yastations WHERE " . $qry);
@@ -1538,7 +1542,7 @@ class yadevices extends module
 
             //TTS LOCAL
             $qry = "TTS=1";
-            if ($details['destination']) {
+            if (isset($details['destination'])) {
                 $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
             $stations = SQLSelect("SELECT * FROM yastations WHERE ".$qry);
