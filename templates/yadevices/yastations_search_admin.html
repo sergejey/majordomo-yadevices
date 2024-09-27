@@ -5,8 +5,8 @@
 		<div class="col-md-6" style="padding-bottom: 15px;">
 			<div class="media" style="cursor: pointer;border: 1px solid #6c13ee;padding: 10px;border-radius: 5px;[#if IS_ONLINE!="1"#]opacity: 0.3;[#endif#]" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=edit_yastations&id=[#ID#]'">
 				<a class="pull-left" href="#">
-                                        [#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'linkplay_a98' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi'#]
-                                        <img class="media-object" src="/templates/yadevices/img/cover/[#PLATFORM#].png">
+                                        [#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'linkplay_a98' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
+                                        <img class="media-object" src="<#ROOTHTML#>templates/yadevices/img/cover/[#PLATFORM#].png">
                                         [#else#]
                                         <img class="media-object" src="[#ICON_URL#]">
                                         [#endif#]
