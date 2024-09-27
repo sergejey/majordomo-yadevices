@@ -1067,7 +1067,7 @@ class yadevices extends module
             $oauth_token = $this->config['OAUTH_TOKEN'];
         }
 
-        if (!$oauth_token == '') return $oauth_token;
+        if ($oauth_token != '') return $oauth_token;
 
         $post = array(
             'client_secret' => 'ad0a908f0aa341a182a37ecd75bc319e',
