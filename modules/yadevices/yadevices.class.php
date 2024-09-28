@@ -477,7 +477,7 @@ class yadevices extends module
                     'instance' => 'online',
                 ],
             ];
-			
+
 			if(isset($data["properties"])){
 				array_push($data["properties"], $onlineArray);
 			}
@@ -1061,11 +1061,8 @@ class yadevices extends module
 
     function getOAuthToken($force = false)
     {
-        if ($force) {
-            $oauth_token = '';
-        } else {
-            $oauth_token = $this->config['OAUTH_TOKEN'];
-        }
+        if ($force) $oauth_token = '';
+        else $oauth_token = $this->config['OAUTH_TOKEN'];
 
         if ($oauth_token != '') return $oauth_token;
 
@@ -1082,13 +1079,12 @@ class yadevices extends module
         $new_cookies = array();
         $lines = explode("\n",$cookie_data);
         foreach($lines as $line) {
-            if (preg_match('/^(.*?)\.yandex\.ru/',$line)) {
-                $values = explode("\t",$line);
-                $cookie_title = $values[5];
-                $cookid_value = $values[6];
-                if ($cookie_title == 'yaexpflags') continue;
-                $new_cookies[]=$cookie_title.'='.$cookid_value;
-            }
+            if (!preg_match('/^(.*?)\.yandex\.ru/',$line)) continue;
+            $values = explode("\t",$line);
+            $cookie_title = $values[5];
+            $cookid_value = $values[6];
+            if ($cookie_title == 'yaexpflags') continue;
+            $new_cookies[]=$cookie_title.'='.$cookid_value;
         }
         $cookies_line = implode("; ",$new_cookies);
         $headers = array(
@@ -1111,49 +1107,48 @@ class yadevices extends module
 
         $data = json_decode($result, true);
 
-        if ($data['access_token']) {
-            // getAuth token
-            $post = array(
-                'client_secret' => '53bc75238f0c4d08a118e51fe9203300',
-                'client_id' => '23cabbbdc6cd418abb4b39c32c41195d',
-                'grant_type' => 'x-token',
-                'access_token' => $data['access_token'],
-            );
-            $postvars = '';
-            foreach($post as $key=>$value) {
-                $postvars .= $key . "=" . urlencode($value) . "&";
-            }
-            $YaCurl = curl_init();
-            curl_setopt($YaCurl, CURLOPT_URL, 'https://oauth.mobile.yandex.net/1/token');
-            curl_setopt($YaCurl, CURLOPT_POST, true);
-            curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-            $result = curl_exec($YaCurl);
-            curl_close($YaCurl);
-
-            $data = json_decode($result,true);
-            if ($data['access_token']) {
-                $oauth_token = $data['access_token'];
-                $this->config['OAUTH_TOKEN'] = $oauth_token;
-                $this->saveConfig();
-                return $oauth_token;
-            } else {
-                if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                    DebMes("Failed to get x-token token:\n" . $result, 'yadevices');
-                }
-                return false;
-            }
-        } else {
+        if (!$data['access_token']) {
             if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
                 DebMes("Failed to get access token:\n" . $result, 'yadevices');
             }
             return false;
         }
+        // getAuth token
+        $post = array(
+            'client_secret' => '53bc75238f0c4d08a118e51fe9203300',
+            'client_id' => '23cabbbdc6cd418abb4b39c32c41195d',
+            'grant_type' => 'x-token',
+            'access_token' => $data['access_token'],
+        );
+        $postvars = '';
+        foreach($post as $key=>$value) {
+            $postvars .= $key . "=" . urlencode($value) . "&";
+        }
+        $YaCurl = curl_init();
+        curl_setopt($YaCurl, CURLOPT_URL, 'https://oauth.mobile.yandex.net/1/token');
+        curl_setopt($YaCurl, CURLOPT_POST, true);
+        curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
+        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
+        $result = curl_exec($YaCurl);
+        curl_close($YaCurl);
+
+        $data = json_decode($result,true);
+        if (!$data['access_token']) {
+            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+                DebMes("Failed to get x-token token:\n" . $result, 'yadevices');
+            }
+            return false;
+        }
+        $oauth_token = $data['access_token'];
+        $this->config['OAUTH_TOKEN'] = $oauth_token;
+        $this->saveConfig();
+        return $oauth_token;
     }
+
     function getDeviceToken($device_id, $platform, $force = false)
     {
         $oauth_token = $this->getOAuthToken();
