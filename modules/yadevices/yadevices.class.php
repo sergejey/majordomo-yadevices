@@ -558,9 +558,12 @@ class yadevices extends module
                     $req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . dbSafe($device['YADEVICE_ID']) . "'");
 
                     //Основные датчики
-                    $value = $propertie['state']['value'];
-
-                    $new_value = $value;
+                    if (isset($propertie['state']['value'])) {
+                        $value = $propertie['state']['value'];
+                    } else {
+                        $value = '';
+                    }
+                    $new_value = $value.'';
                     $old_value = $req_prop['VALUE'];
 
                     //debMes($device['YADEVICE_ID'].' - '.$propertie['type'].'.'.$propertie['parameters']['instance'].' - NEW: '.$value.', OLD - '.$req_prop['VALUE']);
@@ -571,7 +574,6 @@ class yadevices extends module
                     if ($new_value != $old_value) {
                         $req_prop['VALUE'] = $new_value;
                         $req_prop['UPDATED'] = date('Y-m-d H:i:s');
-
                         SQLUpdate('yadevices_capabilities', $req_prop);
                     }
                     if ($new_value != $old_value && !empty($req_prop['LINKED_OBJECT']) && !empty($req_prop['LINKED_METHOD'])) {
