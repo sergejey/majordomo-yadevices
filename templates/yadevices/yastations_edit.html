@@ -52,7 +52,7 @@
 				[#endif#]
 			</div>
 		</div>
-		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum'#]
 		<div class="form-group [#if ERR_IP#]has-error[#endif#]">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IP</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
@@ -66,7 +66,7 @@
 				<label class="radio-inline">
 					<input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_NO#>
 				</label>
-				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
+				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum'#]
 					[#if DEVICE_TOKEN!="" AND IP != ""#]
 					<label class="radio-inline">
 						<input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_YES#> (локально)
@@ -112,7 +112,7 @@
 		</div>
 	</div>
 
-		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum'#]
 		
 		<div class="form-group">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Плеер для сцены:</label>
@@ -208,7 +208,7 @@
 			<div class="form-group">
 				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Способ отправки:</label>
 				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
-					[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
+					[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum'#]
 						[#if DEVICE_TOKEN!="" AND IP != ""#]
 						<label class="radio-inline">
 							<input type="radio" onchange="if($(this).prop('checked')) {$('#sendAsOnlyCloud').hide();$('#cloudTTSHelpHintdemo').hide();}" name="cloud" value="0" [#if CLOUD=="0"#] checked[#endif#]> Локально
