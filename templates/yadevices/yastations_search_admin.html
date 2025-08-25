@@ -4,26 +4,35 @@
 		[#begin RESULT#]
 		<div class="col-md-6" style="padding-bottom: 15px;">
 			<div class="media" style="cursor: pointer;border: 1px solid #6c13ee;padding: 10px;border-radius: 5px;[#if IS_ONLINE!="1"#]opacity: 0.3;[#endif#]" onclick="location.href='?md=yadevices&inst=&action=yadevices&view_mode=edit_yastations&id=[#ID#]'">
+			[#if PLAYING="1"#]<div  style="background: url(https://[#COVER#]120x120);background-repeat: no-repeat;background-position: right top;">[#endif PLAYING#]
 				<a class="pull-left" href="#">
-                                        [#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'linkplay_a98' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber'#]
-                                        <img class="media-object" src="<#ROOTHTML#>templates/yadevices/img/cover/[#PLATFORM#].png">
-                                        [#else#]
-                                        <img class="media-object" src="[#ICON_URL#]">
-                                        [#endif#]
+
+                                        <img class="media-object" src="[#ICON_URL#]" width="120">
+
 
 				</a>
 				<div class="media-body">
 					<h4 class="media-heading">
-						<i class="glyphicon glyphicon-off" style="color: [#if IS_ONLINE="1"#]green[#else IS_ONLINE#]red[#endif#]"></i>
+						<i class="glyphicon glyphicon-off" style="color: [#if IS_ONLINE="1"#]green"[#else IS_ONLINE#]red"[#endif#]></i>
 						<b>[#TITLE#] ([#PLATFORM#])</b>
 					</h4>
-					<div style="font-size: 1rem;">
+					
+					<div style="font-size: 1.2rem;">
 						<b>ID:</b> [#STATION_ID#]<br>
 						<b>IOT ID:</b> [#IOT_ID#]<br>
-						<b>Обновлено:</b> [#UPDATED#]<br>
+						<b>Громкость:</b> [#VOLUME#]<br>
 						<b>Озвучивание событий:</b> [#if TTS="0"#]Нет[#endif TTS#]
 							[#if TTS="2"#]Облако [#if MIN_LEVEL_TEXT!=''#](&gt;= [#MIN_LEVEL_TEXT#])[#endif#][#endif TTS#]
 							[#if TTS="1"#]Локально [#if MIN_LEVEL_TEXT!=''#](&gt;= [#MIN_LEVEL_TEXT#])[#endif#][#endif TTS#]
+							<br>
+						[#if PLAYING="1"#]
+						<b>Исполнитель:</b> [#ARTIST#]<br>
+						<b>Название трека:</b> [#TRACK#]<br>
+						</div>
+						[#else PLAYING#]
+						<br>
+						<b>НЕ ИСПОЛНЯЕТСЯ</b>
+						[#endif PLAYING#]
 					</div>
 				</div>
 			</div>
@@ -32,11 +41,11 @@
 	[#else#]
 	<div class="col-md-12" style="padding: 15px;">
 		<div class="alert alert-warning text-center">
-			Coockie файл загружен, теперь необходимо обновить списов устройств. Если после обновления Яндекс.Устройства так и не появились, то видимо возникла проблема с coockie файлом.
+			<h2>Авторизация</h2>
+			<p>Для начала работы с модулем необходимо пройти авторизацию.</p>
 			<br><br>
-			[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
-			<a href="?mode=refresh&tab=<#TAB#>&view_mode=<#VIEW_MODE#>" class="btn btn-success btn-sm" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Обновить устройства</a>
-			<a href="?view_mode=logout" class="btn btn-danger btn-sm" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-log-out"></i> Выйти</a>
+			[#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]			<a href="?view_mode=auth" class="btn btn-success btn-sm" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-refresh"></i> Авторизация</a>
+
 			[#endif#]
 		</div>
 	</div>

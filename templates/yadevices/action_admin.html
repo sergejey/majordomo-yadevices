@@ -2,7 +2,7 @@
 		<div class="col-md-12" style="color:white;padding-top: 10px;padding-bottom: 10px;border-radius: 5px;background: radial-gradient(circle farthest-corner at 10px 10px, #ae21ff, #6121ff);">
 			<div class="row">
 				<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12" style="padding-left: 70px;">
-					Привет, [#FULL_NAME#]
+					Привет, я Алиса!
 				</div>
 				<div class="col-lg-6 col-md-6 col-sm-6 col-xs-12 text-right" style="flex-direction: column;">
 					<a href="https://mjdm.ru/forum/viewtopic.php?f=5&t=7359" target="_blank" style="margin-right: 5px;border-right: 1px solid white;padding-right: 5px;color: white;text-decoration: none;"><i class="glyphicon glyphicon-fire"></i> Баги и обсуждение</a>
@@ -23,14 +23,11 @@
 		</a>
 	</div>
 
-	[#if COOKIE_FILE != 1#]
+	[#if AUTHORIZED != 1#]
         [#if VIEW_MODE="search_yastations" || VIEW_MODE=""#]
 
-		<!--#
-		[#inc need_coockie.html#]
-		#-->
-	<h2>Авторизация</h2>
-	<p>Для корректной работы модуля необходимо <a href="?view_mode=auth">пройти авторизацию</a>.</p>
+	<h2 class="text-danger">Авторизация</h2>
+	<p>Авторизация отсутствует! Необходимо заново <a href="?view_mode=auth">пройти авторизацию</a>.</p>
 
         [#endif VIEW_MODE#]
     [#endif#]

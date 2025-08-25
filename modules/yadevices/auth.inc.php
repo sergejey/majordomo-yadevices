@@ -11,10 +11,13 @@ if (gr('ok_msg')) {
 
 if (gr('refresh_devices')) {
     $this->refreshDevices();
+	$this->addScenarios();
 }
 
 if ($type == 'reset') {
     @unlink(YADEVICES_COOKIE_PATH);
+	$this->config['AUTHORIZED'] = 0;
+	$this->saveConfig();
     $this->redirect("?view_mode=" . $this->view_mode);
 }
 
@@ -34,15 +37,8 @@ if ($type == 'otp') {
             foreach($post as $key=>$value) {
                 $postvars .= $key . "=" . urlencode($value) . "&";
             }
-            $YaCurl = curl_init();
-            curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/registration-validations/auth/multi_step/commit_password');
-            curl_setopt($YaCurl, CURLOPT_POST, true);
-            curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
-            $result = curl_exec($YaCurl);
-            curl_close($YaCurl);
+
+			$result = $this->curl('https://passport.yandex.ru/registration-validations/auth/multi_step/commit_password', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR => $use_cookie_file]);
             $data = json_decode($result, true);
             if ($data['status']=='ok' || $data['errors'][0]=='account.auth_passed') {
                 rename($use_cookie_file, YADEVICES_COOKIE_PATH);
@@ -52,6 +48,7 @@ if ($type == 'otp') {
                     $out['ERR_MSG'] = 'Ошибка авторизации!';
                     return;
                 } else {
+					$this->parseUserName();
                     $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
                 }
             } else {
@@ -73,16 +70,7 @@ if ($type == 'otp') {
                 foreach($post as $key=>$value) {
                     $postvars .= $key . "=" . urlencode($value) . "&";
                 }
-                $YaCurl = curl_init();
-                curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/registration-validations/auth/multi_step/start');
-                curl_setopt($YaCurl, CURLOPT_POST, true);
-                curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-                curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
-                curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
-                $result = curl_exec($YaCurl);
-
-                curl_close($YaCurl);
+				$result = $this->curl('https://passport.yandex.ru/registration-validations/auth/multi_step/start', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR => $use_cookie_file]);
                 $data = json_decode($result, true);
                 if ($data['status']=='ok') {
                     $track_id = $data['track_id'];
@@ -108,27 +96,13 @@ if ($type == 'qr') {
             'csrf_token' => $csrf_token,
             'track_id' => $track_id,
         );
+		
         $postvars = '';
         foreach($post as $key=>$value) {
             $postvars .= $key . "=" . urlencode($value) . "&";
         }
-
-        $YaCurl = curl_init();
-        $url = 'https://passport.yandex.ru/auth/magic/status/';
-
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_POST, true);
-        curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-
+		$result = $this->curl('https://passport.yandex.ru/auth/new/magic/status/', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file]);
         $data = json_decode($result, true);
-
         if ($data['status']=='ok' || $data['errors'][0]=='account.auth_passed') {
             rename($use_cookie_file, YADEVICES_COOKIE_PATH);
             $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
@@ -137,6 +111,7 @@ if ($type == 'qr') {
                 $out['ERR_MSG'] = 'Ошибка авторизации!';
                 return;
             } else {
+				$this->parseUserName();
                 $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
             }
         } else {
@@ -155,30 +130,18 @@ if ($type == 'qr') {
                 'retpath' => 'https://passport.yandex.ru/profile',
                 'with_code' => 1,
             );
-
             $postvars = '';
             foreach($post as $key=>$value) {
                 $postvars .= $key . "=" . urlencode($value) . "&";
             }
-            $YaCurl = curl_init();
-            curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/registration-validations/auth/password/submit');
-            curl_setopt($YaCurl, CURLOPT_POST, true);
-            curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-            curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $use_cookie_file);
-            curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $use_cookie_file);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-            $result = curl_exec($YaCurl);
-            curl_close($YaCurl);
-
+			$result = $this->curl('https://passport.yandex.ru/registration-validations/auth/password/submit', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file]);
             $data = json_decode($result, true);
             if ($data['status'] == 'ok') {
                 $out['TRACK_ID'] = $data['track_id'];
                 $out['CSRF_TOKEN'] = $data['csrf_token'];
                 $out['QR_URL'] = 'https://passport.yandex.ru/auth/magic/code/?track_id=' . $data['track_id'];
             } else {
-                $out['ERR_MSG'] = 'Ошибка получения QR-кода';
+                $out['ERR_MSG'] = 'Ошибка получения QR-кода, обновите страницу';
             }
         } else {
             $out['ERR_MSG'] = 'Ошибка получения CSRF-токена';
@@ -196,6 +159,7 @@ if ($type == 'cookie') {
             $out['ERR_MSG'] = 'Файл который вы загружаете не является Cookie файлом с сайта Яндекс или он устарел.';
             return;
         } else {
+			$this->parseUserName();
             $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
         }
     }
@@ -206,5 +170,4 @@ if (!$type) {
     if (is_array($data)) {
         $out['AUTHORIZED_OK'] = 1;
     }
-
 }

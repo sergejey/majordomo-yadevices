@@ -33,8 +33,9 @@ if ($go_linked_object && $go_linked_property) {
   if ($res[0]['ID']) {
    //paging($res, 100, $out); // search result paging
    $total=count($res);
+   include_once "utils/devices_url.php";
    for($i=0;$i<$total;$i++) {
-    // some action for every record if required
+	// some action for every record if required 
    }
    $out['RESULT']=$res;
   }

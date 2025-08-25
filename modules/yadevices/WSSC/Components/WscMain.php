@@ -319,6 +319,10 @@ class WscMain implements WscCommonsContract
 
         return $response;
     }
+	public function getSocket()
+    {
+        return $this->socket;
+    }
 
     /**
      * Tell the socket to close.
@@ -372,6 +376,7 @@ class WscMain implements WscCommonsContract
     {
         $data = '';
         while (($dataLen = strlen($data)) < $len) {
+
             $buff = fread($this->socket, $len - $dataLen);
 
             if ($buff === false) {
