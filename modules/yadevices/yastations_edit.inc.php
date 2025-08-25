@@ -17,12 +17,20 @@ if ($this->mode == 'send_text') {
 	
     if ($out['CLOUD'] == 1) {
 		if($out['SENDAS'] == 1) {
-			$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), 'text_action');
+			$command = 'text_action';
 		} else {
-			$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), 'phrase_action');
+			$command = 'phrase_action';
 		}
+		$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), $command);
     } else {
-        $result = $this->sendCommandToStation($rec['ID'],gr('text'));
+		if($out['SENDAS'] == 0) {
+			$command = 'text';
+		} else if($out['SENDAS'] == 1) {
+			$command = 'command';
+		} else if($out['SENDAS'] == 2) {
+			$command = 'dialog';
+		}
+		$result = $this->sendCommandToStation($rec, $command, gr('text'),);
     }
 	
     $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']);
@@ -34,13 +42,6 @@ if ($this->mode == 'update') {
     $rec['IP'] = gr('ip');
     $rec['TTS'] = gr('tts', 'int');
     $rec['MIN_LEVEL_TEXT'] = gr('min_level_text');
-    if ($rec['TTS']==1) {
-        $rec['TTS_EFFECT'] = gr('tts_effect');
-        $rec['TTS_ANNOUNCE'] = gr('tts_announce');
-    } else {
-        $rec['TTS_EFFECT']='';
-        $rec['TTS_ANNOUNCE']='';
-    }
 
     $rec['ALLOW_ASK'] = gr('allow_ask', 'int');
     //$rec['DEVICE_TOKEN'] = gr('device_token');
@@ -76,5 +77,4 @@ if (is_array($rec)) {
 if (isset($rec['ID']) && isset($rec['MIN_LEVEL']) && !isset($rec['MIN_LEVEL_TEXT'])) {
     $rec['MIN_LEVEL_TEXT']=$rec['MIN_LEVEL'];
 }
-
 outHash($rec, $out);

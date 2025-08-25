@@ -1,10 +1,11 @@
-<div class="row" style="border: 1px solid #6c13ee;margin-top:10px">
+<div class="row" style="border: 1px solid #6c13ee;margin-top:10px; border-radius:5px;">
 	<div class="col-md-12">
-		<h2><img src="http://avatars.mds.yandex.net/get-iot/icons-devices-[#DEVICE_TYPE#].svg/orig"> [#TITLE#]</h2>
+		<h2>[#if VALUE !=''#]<a href="?view_mode=edit_yadevices&id=[#ID#]&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]">[#endif VALUE#]<img src="[#ICON#]" width="80" height="80">[#if VALUE !=''#]</a>[#endif VALUE#][#TITLE#]</h2>
 	</div>
 	
 	<div class="col-md-12">
 		<form class="form-horizontal">
+			[#if SKILLS_ID != ''#]
 			<div class="form-group">
 				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">ID навыка</label>
 				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
@@ -29,20 +30,15 @@
 					<input id="station_id" name="station_id" value="[#SKILLS_DEVELOPER_NAME#]" readonly type="text" class="form-control" onclick="$(this).select();">
 				</div>
 			</div>
-			<div class="form-group">
-				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Обновить устройства</label>
-				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
-					<a href="?view_mode=edit_yadevices&id=[#ID#]&mode=reloadSkills&tab=[#SKILLS_ID#]" class="btn btn-warning" role="button">Обновить список устройств навыка</a>
-				</div>
-			</div>
 			<hr>
+			[#endif SKILL_ID#]
 			<div class="form-group">
 				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IoT ID / MDM ID</label>
 				<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
 					<input id="station_id" name="station_id" value="[#IOT_ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
 				</div>
 				<div class="col-lg-5 col-md-5 col-sm-6 col-xs-6">
-					<input id="station_id" name="station_id" value="[#ID#]" readonly type="text" class="form-control" onclick="$(this).select();">
+					<input id="station_id" name="station_id" value="[#if STATION == true#][#yastationID#][#else#][#ID#][#endif STATION#]" readonly type="text" class="form-control" onclick="$(this).select();">
 				</div>
 			</div>
 			<div class="form-group">
@@ -84,6 +80,7 @@
 						</tr>
 					</thead>
 					[#begin PROPERTIES#]
+					[#if HIDE==0#]
 					<tr>
 						<td>
 							[#TITLE#]
@@ -114,16 +111,13 @@
 						[#endif#]
 						<td>[#UPDATED#]</td>
 					</tr>
+					[#endif HIDE#]
 					[#end PROPERTIES#]
 				</table>
 				
 				<center>
 					<input type="submit" class="btn btn-default btn-success" value="<#LANG_SUBMIT#>">
-					<a href="?view_mode=search_yadevices" class="btn btn-warning"><#LANG_CANCEL#></a>
-					[#if RELOADAFTEROPEN!=1#]
-						<a href="?view_mode=edit_yadevices&id=[#ID#]&mode=refreshDeviceData" class="btn btn-primary" role="button">Обновить данные</a>
-					[#endif#]
-				
+					<a href="?view_mode=search_yadevices" class="btn btn-warning"><#LANG_CANCEL#></a>				
 				</center>
 				<input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
 				<input type="hidden" name="id" value="<#ID#>">
@@ -133,13 +127,3 @@
 	</div>
 </div>
 [#endif#]
-
-<!---
-[#if TITLE="devices.capabilities.on_off"#]
-							<a href="?id=<#ID#>&view_mode=<#VIEW_MODE#>&property_id=[#ID#]&send_value=1" class="btn btn-default"><#LANG_ON#></a>
-							<a href="?id=<#ID#>&view_mode=<#VIEW_MODE#>&property_id=[#ID#]&send_value=0" class="btn btn-default"><#LANG_OFF#></a>
-							[#endif#]
-							--->
-
-
-

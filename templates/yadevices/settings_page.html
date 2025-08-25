@@ -3,10 +3,10 @@
 	<form action="?" method="post" enctype="multipart/form-data" name="frmEdit" style="border-left: 1px solid #730ae7;margin-left: 10px;padding-left: 10px;">
 		<div class="checkbox">
 			<label>
-				<input type="checkbox" name="cycleIsOn" [#if STATUS_CYCLE==1#]checked[#endif#] onclick="if($(this).prop('checked')) { $('#cycleIsOnTime_block').show() } else { $('#cycleIsOnTime_block').hide() }"> Активировать цикл
-				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Модуль будет опрашивать состояние устройств в Яндексе</p>
+				 Время опроса состояния станций
+				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Модуль будет опрашивать состояние станций</p>
 			</label>
-			<label id="cycleIsOnTime_block" [#if STATUS_CYCLE!=1#]style="display: none;"[#endif#]>
+			<label id="cycleIsOnTime_block" >
 				<select class="form-control" name="cycleIsOnTime">
 					<option value="10" [#if RELOAD_TIME==10#]selected[#endif#]>10 сек.</option>
 					<option value="15" [#if RELOAD_TIME==15#]selected[#endif#]>15 сек.</option>
@@ -19,12 +19,6 @@
 				</select>
 				<p class="help-block" style="font-size: 1rem;margin-top: 2px;">Чем ниже - тем рискованнее, могут забанить.</p>
 				[#module name="xray" action="service" cycle="yadevices"#]
-			</label>
-		</div>
-		<div class="checkbox">
-			<label>
-				<input type="checkbox" name="reloadAfterOpen" [#if RELOADAFTEROPEN==1#]checked[#endif#]> Обновлять при открытии
-				<p class="help-block" style="font-size: 1rem;margin-top: 0px;">Обновлять значения устройств при открытии их страницы</p>
 			</label>
 		</div>
 		<div class="checkbox">

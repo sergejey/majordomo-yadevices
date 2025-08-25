@@ -7,14 +7,18 @@
 						<th>Название</th>
 						<th>Тип устройства</th>
 						<th>IOT ID</th>
-						<th>Выгружен</th>
+						<th>Комната</th>
+						<th>Дом</th>
+						<th>Обновлён</th>
 					</tr>
 				</thead>
 				[#begin RESULT#]
 				<tr>
-					<td><a href="?view_mode=edit_yadevices&id=[#ID#]" title="Edit">[#TITLE#]</a></td>
+					<td>[#if VALUE !=''#]<a href="?view_mode=search_yadevices&mode=switch&iot_id=[#IOT_ID#]&value=[#VALUE#]">[#endif VALUE#] <img src="[#ICON#]" width="30" height="30">[#if VALUE !=''#]</a>[#endif VALUE#]<a href="?view_mode=edit_yadevices&id=[#ID#]" title="Edit">[#TITLE#]</a></td>
 					<td>[#DEVICE_TYPE#]</td>
 					<td>[#IOT_ID#]</td>
+					<td>[#ROOM#]</td>
+					<td>[#HOUSE#]</td>
 					<td>[#UPDATED#]</td>
 				</tr>
 				[#end RESULT#]

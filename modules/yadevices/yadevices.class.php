@@ -5,6 +5,7 @@
  */
 
 Define('YADEVICES_COOKIE_PATH', ROOT . "cms/yadevices/cookie.txt");
+const GLAGOL_PORT = 1961;
 
 spl_autoload_register(function ($class_name) {
     $path = DIR_MODULES . 'yadevices/' . $class_name . '.php';
@@ -40,7 +41,6 @@ class yadevices extends module
         $this->title = "YaDevices";
         $this->module_category = "<#LANG_SECTION_DEVICES#>";
         $this->checkInstalled();
-
     }
 
     /**
@@ -131,7 +131,6 @@ class yadevices extends module
      */
     function run()
     {
-
         $out = array();
         if ($this->action == 'admin') {
             $this->admin($out);
@@ -160,36 +159,61 @@ class yadevices extends module
         if (!empty($params['runscenario'])) {
             $this->runScenario($params['runscenario']);
         }
+		if (!empty($params['getonline'])) {
+            $this->onlineStations();
+        }
+		
+        //DebMes("API call: " . json_encode($params, JSON_UNESCAPED_UNICODE), 'yadevices');
 
-        DebMes("API call: " . json_encode($params), 'yadevices');
-
-        if ($params['station'] && (isset($params['command']) || isset($params['say']))) {
+        if (isset($params['station']) && (isset($params['command']) || isset($params['say']))) {
             if(!isset($params['command'])) $params['command'] = '';
             $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$params['station']);
-            $effect = isset($params['effect']) ? $params['effect'] : '';
-            $announce = isset($params['announce']) ? $params['announce'] : '';
-            if (!$effect && $station['TTS_EFFECT']) {
-                $effect = $station['TTS_EFFECT'];
-            }
-            if (!$announce && $station['TTS_ANNOUNCE']) {
-                $announce = $station['TTS_ANNOUNCE'];
-            }
-            //TTS=2 AND IOT_ID!=''
-            if ($station['TTS'] == 2 && $station['IOT_ID'] != '') {
-                if ($params['say']) {
-                    $msg = $params['say'];
-                    return $this->sendCloudTTS($station['IOT_ID'], $msg);
-                } else {
-                    return $this->sendCloudTTS($station['IOT_ID'], $params['command'], 'text_action');
+			
+			if(isset($params['data']) and isset($params['volume'])){
+				$params['data'] = $params['data'].'^'.$params['volume'];
+			}
+            if ($station['TTS'] == 2 && $station['IOT_ID'] != '' || isset($params['cloud'])) {
+				if(empty($this->config['AUTHORIZED'])) return;
+				if($params['command'] == 'text'){
+					$params['command'] = 'phrase_action';
+				} else if($params['command'] == 'command' or $params['command'] == 'dialog'){
+					$params['command'] = 'text_action';
+				} else if ($params['command'] == 'setVolume' and isset($params['volume'])) {
+					//У ТВСтанций от 1 до 100
+					if($station['PLATFORM'] == "magritte" or $station['PLATFORM'] == "monet") $params['volume'] *= 10;
+					$params['command'] = 'text_action';
+					$params['data'] = 'громкость на ' . $params['volume'];
+				} else if($params['command'] == 'volumeUp'){
+					$params['command'] = 'text_action';
+					$params['data'] = 'громче';
+				} else if($params['command'] == 'volumeDown'){
+					$params['command'] = 'text_action';
+					$params['data'] = 'тише';
+				}
+				if (isset($params['say'])) { //для обратной совместимости
+					$params['data'] = $params['say'];
+					$params['command'] = 'phrase_action';
+				} else if(!isset($params['data']) and !isset($params['volume'])){ //для обратной совместимости
+					$params['data'] = $params['command'];
+					$params['command'] = 'phrase_action';
                 }
+				return $this->sendCloudTTS($station['IOT_ID'], $params['data'], $params['command']);
             } else {
-                if (($params['command'] == 'setVolume') && $params['volume']) {
-                    return $this->sendCommandToStation((int)$params['station'], $params['command'], $params['volume']);
-                } elseif ($params['say']) {
-                    $this->sendCommandToStation((int)$params['station'], 'повтори за мной ' . $params['say']);
-                } else {
-                    return $this->sendCommandToStation((int)$params['station'], $params['command']);
+                if ($params['command'] == 'setVolume') {
+					if(isset($params['volume'])){
+						(float)$params['data'] = is_float($params['volume']) ? $params['volume'] : $params['volume'] * 0.1;
+					} else (float)$params['data'] = $params['data'] * 0.1;
+				} else if($params['command'] == 'volumeUp' or $params['command'] == 'volumeDown'){
+					$params['data'] = $params['command'];
+				} else if (isset($params['say'])) { //для обратной совместимости
+					$params['data'] = $params['say'];
+					$params['command'] = 'text';
+				} else if (!isset($params['data'])) {
+                    $params['data'] = "";
+                } else if ($params['data'] == 'volumeUp' or $params['data'] == 'volumeDown') {
+					$params['command'] = $params['data'];
                 }
+                return $this->sendCommandToStation($station, $params['command'], $params['data']);
             }
         }
     }
@@ -204,35 +228,10 @@ class yadevices extends module
     function admin(&$out)
     {
         $this->getConfig();
-        $out['API_USERNAME'] = $this->config['API_USERNAME'];
-        $out['API_PASSWORD'] = $this->config['API_PASSWORD'];
-        $out['OAUTH_TOKEN'] = $this->config['OAUTH_TOKEN'];
-        $out['FULL_NAME'] = $this->config['FULL_NAME'];
+		$out['API_USERNAME'] = $this->config['API_USERNAME'];
+		$out['OAUTH_TOKEN'] = $this->config['OAUTH_TOKEN'];
 
         if ($this->view_mode == 'update_settings') {
-            global $api_username;
-            $this->config['API_USERNAME'] = $api_username;
-            global $api_password;
-            $this->config['API_PASSWORD'] = $api_password;
-
-            $token = $this->firstAuth($api_username, $api_password);
-            if ($token != '') {
-                $this->config['OAUTH_TOKEN'] = $token;
-
-                require_once('client.php');
-                $newClient = new Client($token);
-                $accountInfo = $newClient->accountStatus();
-                $this->config['FULL_NAME'] = $accountInfo->account->fullName;
-
-                //$this->refreshStations();
-                //$this->refreshDevices();
-
-            } else {
-                $this->config['OAUTH_TOKEN'] = '[NON-TOKEN-ACCOUNT]';
-                $this->config['FULL_NAME'] = '[Резервный способ входа]';
-
-                //$out['AUTH_ERROR'] = 'Ошибка получения OAUTH токена! Повторите попытку или обратитесь в службу поддержки Яндекс. Так же, ошибка может быть вызвана неверным логином или паролем!';
-            }
             $this->saveConfig();
             $this->redirect("?");
         }
@@ -251,13 +250,6 @@ class yadevices extends module
         }
 
         if ($this->view_mode == 'logout') {
-            $this->config['OAUTH_TOKEN'] = '';
-            $this->config['FULL_NAME'] = '';
-            $this->config['API_USERNAME'] = '';
-            $this->config['API_PASSWORD'] = '';
-
-            //$this->clearAll();
-
             $cookie = YADEVICES_COOKIE_PATH;
             @unlink($cookie);
 
@@ -267,7 +259,7 @@ class yadevices extends module
         if ($this->data_source == 'yastations' || $this->data_source == '') {
             if ($this->view_mode == '' || $this->view_mode == 'search_yastations') {
                 $this->search_yastations($out);
-                $out['LOGIN_STATUS'] = (int)$this->checkLogin();
+                //$out['LOGIN_STATUS'] = (int)$this->checkLogin();
             }
             if ($this->view_mode == 'search_yadevices') {
                 $this->search_yadevices($out);
@@ -286,48 +278,8 @@ class yadevices extends module
                 $this->redirect("?");
             }
             if ($this->mode == 'refresh') {
-                $this->refreshStations();
                 $this->refreshDevices();
                 $this->redirect("?tab=" . $this->tab . "&view_mode=" . $this->view_mode);
-            }
-        }
-        if ($this->view_mode == 'upload_Cookie') {
-            global $file;
-            if (!empty($file) && $_FILES["file"]["type"] == 'text/plain' && $_FILES["file"]["size"] <= '100000') {
-
-                move_uploaded_file($file, YADEVICES_COOKIE_PATH);
-                //https://iot.quasar.yandex.ru/m/user/scenarios
-                $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-
-                if ($checkCookie['status'] != 'ok') {
-                    $cookie = YADEVICES_COOKIE_PATH;
-                    @unlink($cookie);
-                    $out['UPLOAD_ERROR'] = 'Файл который вы загружаете не является Cookie файлом с сайта Яндекс или он устарел.';
-                    return;
-                }
-
-                //Пытаемся фиксить оаутх токен
-                if ($this->config['OAUTH_TOKEN'] == '[NON-TOKEN-ACCOUNT]') {
-                    $generateOAUTHToken = $this->fixOAUTHToken();
-                    if ($generateOAUTHToken != false) {
-                        $this->config['OAUTH_TOKEN'] = $generateOAUTHToken;
-                        //Запросим еще раз инфо
-                        require_once('client.php');
-                        $newClient = new Client($generateOAUTHToken);
-                        $accountInfo = $newClient->accountStatus();
-                        $this->config['FULL_NAME'] = $accountInfo->account->fullName;
-                        $this->saveConfig();
-                    }
-                }
-
-                //$this->clearAll();
-
-                $this->refreshStations();
-                $this->refreshDevices();
-
-                $this->redirect("?");
-            } else {
-                $out['UPLOAD_ERROR'] = 'Допускается загрузка текстовых документов размером не более 100кб.';
             }
         }
 
@@ -351,23 +303,10 @@ class yadevices extends module
                 $this->config['ERRORMONITORTYPE'] = 0;
             }
 
-            if ($cycleIsOn == 'on') {
-                $this->config['STATUS_CYCLE'] = 1;
-            } else {
-                $this->config['STATUS_CYCLE'] = 0;
-            }
-
-            if ($reloadAfterOpen == 'on') {
-                $this->config['RELOADAFTEROPEN'] = 1;
-            } else {
-                $this->config['RELOADAFTEROPEN'] = 0;
-            }
-
-            $this->config['RELOAD_TIME'] = $cycleIsOnTime;
+            $this->config['RELOAD_TIME'] = $cycleIsOnTime ?? 10;
             $this->saveConfig();
 
-            //setGlobal('ThisComputer.cycle_yadevicesRun','');
-            setGlobal('ThisComputer.cycle_yadevicesControl', 'restart');
+            setGlobal('cycle_yadevicesControl', 'restart');
 
             $this->redirect("?");
         }
@@ -378,7 +317,12 @@ class yadevices extends module
         } else {
             $out['COOKIE_FILE'] = 0;
         }
-
+		
+		if(empty($this->config['AUTHORIZED'])){
+			$out['AUTHORIZED'] = 0;
+		} else {
+            $out['AUTHORIZED'] = 1;
+        }
 
         $out['RELOAD_TIME'] = $this->config['RELOAD_TIME'];
         $out['RELOADAFTEROPEN'] = $this->config['RELOADAFTEROPEN'];
@@ -391,281 +335,341 @@ class yadevices extends module
         include_once(DIR_MODULES.'yadevices/auth.inc.php');
     }
 
-    function fixOAUTHToken()
-    {
-        // getAuth token
-        $ya_music_client_id = '23cabbbdc6cd418abb4b39c32c41195d';
-        $url = "https://oauth.yandex.ru/authorize?response_type=token&client_id=" . $ya_music_client_id;
-
-        $cookie = YADEVICES_COOKIE_PATH;
-
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, false);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
-        //curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie);
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        $result = curl_exec($YaCurl);
-
-        if (preg_match('/^Found.*access_token=([^<]+?)&/is', $result, $m)) {
-            $oauth_token = $m[1];
-            return $oauth_token;
-        } else {
-            return false;
-        }
-    }
-
-    function getDeviceTokenByHand($id)
-    {
-        $req = SQLSelectOne("SELECT STATION_ID, PLATFORM FROM yastations WHERE ID='" . dbSafe($id) . "'");
-        $this->getDeviceToken($req['STATION_ID'], $req['PLATFORM']);
-        $this->redirect("?id=" . $id . "&view_mode=edit_yastations");
-    }
-
-    function firstAuth($login, $password)
-    {
-        require_once('client.php');
-        $newClient = new Client();
-        //Запрос на получение токена
-        $getToken = $newClient->fromCredentials($login, $password, false);
-        return $getToken;
-    }
-
-    function checkLogin()
-    {
-        if (!$this->config['API_USERNAME'] || !$this->config['API_PASSWORD']) {
-            return 0;
-        }
-        $token = $this->getToken();
-        if ($token) {
-            return 1;
-        }
-    }
-
-    function refreshDevicesData($devID = '')
-    {
-        //TODO сделать блокировку функции если цикл выключен
-        //TODO выгрузка по ИД
-        if ($devID != '') {
-            $req[0]['YADEVICE_ID'] = $devID;
-        } else {
-            $req = SQLSelect("SELECT distinct YADEVICE_ID FROM yadevices_capabilities");
-        }
-
-        foreach ($req as $key_device => $device) {
-            //Узнаем IOT_ID
-            $iotID = SQLSelectOne("SELECT IOT_ID FROM yadevices WHERE ID = '" . dbSafe($device['YADEVICE_ID']) . "'");
-            //Запрашиваем инфу по устройству
-            $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices/' . $iotID['IOT_ID']);
-
-
-            if (!is_array($data)) continue;
-
-            if (isset($data['state']) && $data['state'] == 'online') {
-                $currentStatus = 1;
-            } else {
-                $currentStatus = 0;
-            }
-
-            $onlineArray = [
-                'type' => 'devices',
-                'state' => [
-                    'value' => $currentStatus,
-                ],
-                'parameters' => [
-                    'instance' => 'online',
-                ],
-            ];
-
-            if(isset($data["properties"])){
-                array_push($data["properties"], $onlineArray);
-            }
-
-            //Циклом пройдемся по всем умениям
-            if (isset($data["capabilities"]) && is_array($data["capabilities"])) {
-                foreach ($data["capabilities"] as $capabilitie) {
-                    if ($capabilitie['type'] == 'devices.capabilities.on_off') {
-                        $c_type = $capabilitie['type'];
-                    } else {
-                        if (isset($capabilitie['state']['instance'])) {
-                            $c_type = $capabilitie['type'] . '.' . $capabilitie['state']['instance'];
-                        } else if ($capabilitie['parameters']['instance']) {
-                            $c_type = $capabilitie['type'] . '.' . $capabilitie['parameters']['instance'];
-                        } else {
-                            $c_type = $capabilitie['type'] . '.unknown';
-                        }
-                    }
-
-                    $req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = '" . dbSafe($device['YADEVICE_ID']) . "'");
-
-                    //Основные умения, меняем значение
-                    if (isset($capabilitie['state']['value'])){
-                        if(is_bool($capabilitie['state']['value']) == true) {
-                            if ($capabilitie['state']['value'] == true) {
-                                $value = 1;
-                            } else {
-                                $value = 0;
-                            }
-                        } else if (isset($capabilitie['state']['instance'])){
-                            if($capabilitie['state']['instance']== 'color') {
-                                $value = $capabilitie['state']['value']['id'];
-                            } else if ($capabilitie['state']['instance']== 'scene') { //xor2016: добавлена сцена для Я.лампочки
-                                $value = $capabilitie['state']['value']['id'];
-                            }
-                        } else {
-                            $value = $capabilitie['state']['value'];
-                        }  
-                    } else {
-                        $value = '?';
-                    }
-
-                    $new_value = $value;
-                    $old_value = $req_skills['VALUE'];
-
-                    //debMes($device['YADEVICE_ID'].' - '.$capabilitie['type'].' - NEW: '.$value.', OLD - '.$req_skills['VALUE']);
-                    //debMes("SELECT * FROM yadevices_capabilities WHERE TITLE = '".dbSafe($c_type)."'");
-
-                    if ($new_value != $old_value && !empty($req_skills['LINKED_OBJECT']) && !empty($req_skills['LINKED_PROPERTY'])) {
-                        if ($new_value != gg($req_skills['LINKED_OBJECT'] . '.' . $req_skills['LINKED_PROPERTY'])) //xor2016: иначе пишется второй раз в свойство
-                            setGlobal($req_skills['LINKED_OBJECT'] . '.' . $req_skills['LINKED_PROPERTY'], $new_value, 0, $this->name . '.' . $c_type);
-                    }
-
-                    if ($new_value != $old_value) {
-                        $req_skills['VALUE'] = $new_value;
-                        $req_skills['UPDATED'] = date('Y-m-d H:i:s');
-
-                        //if($device['YADEVICE_ID'] == '790') {
-                        //	echo '<pre>';
-                        //	var_dump($req_skills);
-                        //}
-
-                        //dprint($req_skills, false);
-                        SQLUpdate('yadevices_capabilities', $req_skills);
-                    }
-                    if (!empty($req_skills['LINKED_OBJECT']) && !empty($req_skills['LINKED_METHOD']) && $new_value != $old_value) {
-                        callMethod($req_skills['LINKED_OBJECT'] . '.' . $req_skills['LINKED_METHOD'], array('NEW_VALUE' => $new_value, 'OLD_VALUE' => $old_value, 'DEVICE_STATE' => $currentStatus, 'UPDATED' => $req_skills['UPDATED'], 'ALLOWPARAMS' => $req_skills['ALLOWPARAMS'], 'MODULE' => $this->name));
-                    }
-                }
-            }
-
-            //Значения датчиков
-            if (isset($data["properties"]) && is_array($data["properties"])) {
-                foreach ($data["properties"] as $propertie) {
-                    $p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
-
-                    //Получаем по каждом свойству по отдельности
-                    $req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . dbSafe($device['YADEVICE_ID']) . "'");
-
-                    //Основные датчики
-                    if (isset($propertie['state']['value'])) {
-                        $value = $propertie['state']['value'];
-                    } else {
-                        $value = '';
-                    }
-                    $new_value = $value.'';
-                    $old_value = $req_prop['VALUE'];
-
-                    //debMes($device['YADEVICE_ID'].' - '.$propertie['type'].'.'.$propertie['parameters']['instance'].' - NEW: '.$value.', OLD - '.$req_prop['VALUE']);
-
-                    if ($new_value != $old_value && !empty($req_prop['LINKED_OBJECT']) && !empty($req_prop['LINKED_PROPERTY'])) {
-                        setGlobal($req_prop['LINKED_OBJECT'] . '.' . $req_prop['LINKED_PROPERTY'], $new_value, 0, $this->name . '.' . $p_type);
-                    }
-                    if ($new_value != $old_value) {
-                        $req_prop['VALUE'] = $new_value;
-                        $req_prop['UPDATED'] = date('Y-m-d H:i:s');
-                        SQLUpdate('yadevices_capabilities', $req_prop);
-                    }
-                    if ($new_value != $old_value && !empty($req_prop['LINKED_OBJECT']) && !empty($req_prop['LINKED_METHOD'])) {
-                        callMethod($req_prop['LINKED_OBJECT'] . '.' . $req_prop['LINKED_METHOD'], array('NEW_VALUE' => $new_value, 'OLD_VALUE' => $old_value, 'DEVICE_STATE' => $currentStatus, 'UPDATED' => $req_prop['UPDATED'], 'ALLOWPARAMS' => $req_prop['ALLOWPARAMS'], 'MODULE' => $this->name));
-                    }
-                }
-            }
-
-        }
-    }
-
+	function receiveQuasar($data){
+		if($data['service'] == 'alice-iot'){
+			if($data['operation'] == 'update_states'){
+				$message = json_decode($data['message'], true);
+				$devices = $message['updated_devices'];
+				foreach($devices as $device){
+					//Получаем девайс из базы
+					$rec_device = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID = '" . dbSafe($device['id']) . "'");
+					if(empty($rec_device['ID'])){
+						//Если такого устройства нет, обновляем девайсы
+						$this->refreshDevices();
+						continue;
+					}
+					//добавим статус в массив для дальнейшей обработки
+					if (isset($device['state']) && $device['state'] == 'online') {
+						$currentStatus = 1;
+					} else {
+						$currentStatus = 0;
+					}
+					$onlineArray = [
+						'type' => 'devices',
+						'state' => [
+							'value' => $currentStatus,
+						],
+						'parameters' => [
+							'instance' => 'online',
+						],
+					];
+					$device["properties"][] = $onlineArray;
+					//Циклом пройдемся по всем умениям
+					if (isset($device["capabilities"]) and is_array($device["capabilities"])) {
+						foreach ($device["capabilities"] as $capabilitie) {
+							if ($capabilitie['type'] == 'devices.capabilities.quasar.server_action') {
+								$c_type = 'cloud.aswr_scenario';
+							} else if ($capabilitie['type'] == 'devices.capabilities.on_off') {
+								$c_type = $capabilitie['type'];
+							} else {
+								if (isset($capabilitie['state']['instance'])) {
+									$c_type = $capabilitie['type'] . '.' . $capabilitie['state']['instance'];
+								} else if ($capabilitie['parameters']['instance']) {
+									$c_type = $capabilitie['type'] . '.' . $capabilitie['parameters']['instance'];
+								} else {
+									$c_type = $capabilitie['type'] . '.unknown';
+								}
+							}
+							$req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = '" . $rec_device['ID'] . "'");
+							if(empty($req_skills)) $this->refreshDevices;
+							//Основные умения, меняем значение
+							$value = '?';
+							if (isset($capabilitie['state']['value'])){
+								if(is_bool($capabilitie['state']['value']) == true) {
+									if ($capabilitie['state']['value'] == true) {
+										$value = 1;
+									} else {
+										$value = 0;
+									}
+								} else if (isset($capabilitie['state']['instance'])){
+									if($capabilitie['state']['instance']== 'color') {
+										$value = $capabilitie['state']['value']['id'];
+									} else if ($capabilitie['state']['instance']== 'scene') {
+										$value = $capabilitie['state']['value']['id'];
+									} else if ($capabilitie['state']['instance']== 'text_action') {
+										$value = $capabilitie['state']['value'];
+									} else {
+										$value = $capabilitie['state']['value'];
+									}
+								} else {
+									$value = $capabilitie['state']['value'];
+								}  
+							}
+							//Ответы на сценарии обновляем всегда
+							if ($c_type == 'cloud.aswr_scenario' or $value != $req_skills['VALUE']) {
+								$params['NEW_VALUE'] = $value;
+								$params['OLD_VALUE'] = $req_skills['VALUE'];
+								$params['DEVICE_STATE'] = $currentStatus;
+								$params['ALLOWPARAMS'] = $req_skills['ALLOWPARAMS'];
+								$params['UPDATED'] = date('Y-m-d H:i:s');
+								$params['MODULE'] = $this->name;
+								$this->setProperty($req_skills, $value, $params, $c_type);
+								$req_skills['VALUE'] = $value;
+								$req_skills['UPDATED'] = date('Y-m-d H:i:s');
+								SQLUpdate('yadevices_capabilities', $req_skills);
+							}
+						}
+					}
+					//Значения датчиков
+					if (isset($data["properties"]) && is_array($data["properties"])) {
+						foreach ($data["properties"] as $propertie) {
+							$p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
+							//Получаем по каждом свойству по отдельности
+							$req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . $rec_device['YADEVICE_ID'] . "'");
+							//Основные датчики
+							$value = $propertie['state']['value'] ?? '';
+							if ($value != $req_prop['VALUE']) {
+								$params['NEW_VALUE'] = $value;
+								$params['OLD_VALUE'] = $req_prop['VALUE'];
+								$params['DEVICE_STATE'] = $currentStatus;
+								$params['ALLOWPARAMS'] = $req_prop['ALLOWPARAMS'];
+								$params['UPDATED'] = date('Y-m-d H:i:s');
+								$params['MODULE'] = $this->name;
+								$this->setProperty($req_prop, $value, $params, $p_type);
+								$req_prop['VALUE'] = $value;
+								$req_prop['UPDATED'] = date('Y-m-d H:i:s');
+								SQLUpdate('yadevices_capabilities', $req_prop);
+							}
+						}
+					}
+				}
+			} else {
+				$this->writeLog($data);
+				$this->writeLog('Не update-states');
+			}
+		} else {
+			$this->writeLog($data);
+			$this->writeLog('Не alice-iot');
+		}
+	}
+	
     function refreshDevices()
     {
-        //SQLExec('TRUNCATE TABLE yadevices');
-        //Делаем анлинк
-        // $req = SQLSelect("SELECT * FROM yadevices_capabilities WHERE LINKED_OBJECT != '' AND LINKED_PROPERTY != ''");
-
-        // foreach($req as $prop) {
-        // removeLinkedProperty($prop['LINKED_OBJECT'], $prop['LINKED_PROPERTY'], $this->name);
-        // }
-        //Чистим таблицу
-        //SQLExec('TRUNCATE TABLE yadevices_capabilities');
-
+		$this->getConfig();
+		if($this->config['AUTHORIZED'] == 0) return false;
+		$this->writeLog('Обновляем устройства.');
         $iot_ids = array();
-        $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
-        if (is_array($data['rooms'])) {
-            $rooms = $data['rooms'];
-            foreach ($rooms as $room) {
-                $devices = $room['devices'];
-                if (is_array($devices)) {
-                    foreach ($devices as $device) {
-                        $iot_id = $device['id'];
-                        $type = $device['type'];
-                        $name = $device['name'];
-                        $quasar_id = $device['quasar_info']['device_id'];
-                        $iot_ids[] = $iot_id;
-
-                        $device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $iot_id . "'");
-                        $device_rec['TITLE'] = $name;
-                        $device_rec['DEVICE_TYPE'] = $type;
-                        $device_rec['UPDATED'] = date('Y-m-d H:i:s');
-                        if (!$device_rec['ID']) {
-                            $device_rec['IOT_ID'] = $iot_id;
-                            $device_rec['ID'] = SQLInsert('yadevices', $device_rec);
-                        } else {
-                            SQLUpdate('yadevices', $device_rec);
-                        }
-
-                        if (preg_match('/^devices.types.smart_speaker/uis', $type)) {
-                            $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
-                            if (!$rec['ID'] && $quasar_id) {
-                                $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . DBSafe($quasar_id) . "'");
-                            }
-                            if ($rec['ID']) {
-                                $rec['IOT_ID'] = $iot_id;
-                                $rec['UPDATED'] = date('Y-m-d H:i:s');
-                                SQLUpdate('yastations', $rec);
-                            }
-                        }
-
-                    }
-                }
-            }
-        }
-        if (is_array($data['speakers'])) {
-            $speakers = $data['speakers'];
-            foreach ($speakers as $speaker) {
-                $name = $speaker['name'];
-                $iot_id = $speaker['id'];
-                $quasar_id = $speaker['quasar_info']['device_id'];
-                $iot_ids[] = $iot_id;
-                $rec = SQLSelectOne("SELECT * FROM yastations WHERE TITLE='" . DBSafe($name) . "'");
-                if (!$rec['ID'] && $quasar_id) {
-                    $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . DBSafe($quasar_id) . "'");
-                }
-                if ($rec['ID']) {
-                    $rec['IOT_ID'] = $iot_id;
-                    $rec['UPDATED'] = date('Y-m-d H:i:s');
-                    SQLUpdate('yastations', $rec);
-                }
-            }
-        }
-
+        $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/v3/user/devices');
+		if($data == 'Unauthorized') return false;
+		if(!isset($data['status']) or $data['status'] != 'ok'){
+			$this->writeLog('Ошибка получения списка устройсте', true);
+			return false;
+		}
+		//Пройдемся по домам
+		foreach($data['households'] as $house){
+			//Пройдёмся по всем устройствам в доме
+			foreach($house['all'] as $device){
+				//Если это Станция
+				if(preg_match('/^devices.types.smart_speaker/uis', $device['type'])) {
+					$rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . DBSafe($device['id']) . "'");
+					$rec['OWNER'] = $this->config['API_USERNAME'];
+					$rec['TITLE'] = $device['name'];
+					$rec['ICON_URL'] = $device['icon_url'];
+					$rec['PLATFORM'] = $device['quasar_info']['platform'];
+					$rec['STATION_ID'] = $device['quasar_info']['device_id'];
+					$rec['IS_ONLINE'] = $device['state'] == 'online' ? 1 : 0;
+					$rec['UPDATED'] = date('Y-m-d H:i:s');
+					if(empty($rec['ID'])) {
+						$rec['IOT_ID'] = $device['id'];
+						$rec['ID'] = SQLInsert('yastations', $rec);
+					} else {
+						SQLUpdate('yastations', $rec);
+					}
+					//Создадим Станцию
+					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $device['id'] . "'");
+					if(empty($device_rec['ID'])) {
+						$device_rec['TITLE'] = $device['name'];
+						$device_rec['DEVICE_TYPE'] = str_replace('smart_speaker.yandex.', '', $device['type']);
+						$device_rec['HOUSE'] = $house['name'];
+						$device_rec['ROOM'] = $device['room_name'];
+						$device_rec['SKILL_ID'] = 'local';
+						$device_rec['UPDATED'] = date('Y-m-d H:i:s');
+						$device_rec['IOT_ID'] = $device['id'];
+						$device_rec['ID'] = SQLInsert('yadevices', $device_rec);
+					}
+					//И умения и свойства Станции
+					//Добавим локальные возможности
+					$local = ['artist' => 'Исполнитель', 'track' => 'Название трека', 'cover' => 'Картинка альбома', 'text' => 'Алиса произнесёт текст', 'command' => 'Алиса выполнит команду', 'dialog' => 'Алиса произнесёт текст и будет ждать ответ', 'audio' => 'Ссылка на аудиофайл или поток', 'other' => 'Другие комады вида gif:URL', 'online' => 'Подключение к Станции установлено', "volume"=>'Громкость от 1 до 10'];
+					foreach($local as $title => $desc){
+						$c_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" .'local.'. $title . "'");
+						//Если нет такого умения
+						if(empty($c_rec['ID'])) {
+							$c_rec['YADEVICE_ID'] = $device_rec['ID'];
+							$c_rec['TITLE'] = 'local.'.$title;
+							$c_rec['ALLOWPARAMS'] = $desc;
+							$c_rec['VALUE'] = '';
+							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'aswr_scenario') $c_rec['READONLY'] = 1;
+							else $c_rec['READONLY'] = 0;
+							$c_rec['UPDATED'] = date('Y-m-d H:i:s');
+							$c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
+						}
+					}
+					//Добавим облачные возможности
+					$cloud = ['text' => 'Алиса произнесёт текст', 'command' => 'Алиса выполнит команду', 'aswr_scenario'=> 'Текст ответа на выполнение сценариев', 'online' => 'Станция онлайн'];
+					foreach($cloud as $title => $desc){
+						$c_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" .'cloud.'. $title . "'");
+						//Если нет такого умения
+						if(empty($c_rec['ID'])) {
+							$c_rec['YADEVICE_ID'] = $device_rec['ID'];
+							$c_rec['TITLE'] = 'cloud.'.$title;
+							$c_rec['ALLOWPARAMS'] = $desc;
+							$c_rec['VALUE'] = '';
+							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'aswr_scenario') $c_rec['READONLY'] = 1;
+							else $c_rec['READONLY'] = 0;
+							$c_rec['UPDATED'] = date('Y-m-d H:i:s');
+							$c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
+						}
+					}
+					//Запоминаем, чтобы подтвердить актуальность устройства
+					$iot_ids[] = $device['id'];
+				//Если другое устройство
+				} else {
+					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $device['id'] . "'");
+					$device_rec['TITLE'] = $device['name'];
+					$device_rec['DEVICE_TYPE'] = $device['type'];
+					$device_rec['HOUSE'] = $house['name'];
+					$device_rec['ROOM'] = $device['room_name'] ?? "";
+					$device_rec['SKILL_ID'] = $device['skill_id'];
+					$device_rec['UPDATED'] = date('Y-m-d H:i:s');
+					if(empty($device_rec['ID'])) {
+						$device_rec['IOT_ID'] = $device['id'];
+						$device_rec['ID'] = SQLInsert('yadevices', $device_rec);
+					} else {
+						SQLUpdate('yadevices', $device_rec);
+					}
+				
+					//Циклом пройдемся по всем умениям
+					if(isset($device["capabilities"]) and is_array($device["capabilities"])) {
+						foreach($device["capabilities"] as $capabilitie) {
+							if($capabilitie['type'] == 'devices.capabilities.on_off') {
+								$c_type = $capabilitie['type'];
+							} else {
+								if($capabilitie['state']['instance']) {
+									$c_type = $capabilitie['type'].'.'.$capabilitie['state']['instance'];
+								} else if($capabilitie['parameters']['instance']) {
+									$c_type = $capabilitie['type'].'.'.$capabilitie['parameters']['instance'];
+								} else {
+									$c_type = $capabilitie['type'].'.unknown';
+								}
+							}
+							
+							if (isset($capabilitie['state']['value'])){
+								if(is_bool($capabilitie['state']['value']) == true) {
+									if ($capabilitie['state']['value'] == true) {
+										$value = 1;
+									} else {
+										$value = 0;
+									}
+								} else if (isset($capabilitie['state']['instance'])){
+									if($capabilitie['state']['instance']== 'color') {
+										$value = $capabilitie['state']['value']['id'];
+									} else if ($capabilitie['state']['instance']== 'scene') {
+										$value = $capabilitie['state']['value']['id'];
+									} else if ($capabilitie['state']['instance']== 'text_action') {
+										$value = $capabilitie['state']['value'];
+									} else {
+										$value = $capabilitie['state']['value'];
+									}
+								} else {
+									$value = $capabilitie['state']['value'];
+								}  
+							}
+							if (is_null($value)) $value = 0;
+				
+							//Обработка для модов
+							if(isset($capabilitie["parameters"]['modes']) and is_array($capabilitie["parameters"]['modes'])) {
+								$allowparam = '';
+								foreach($capabilitie["parameters"]['modes'] as $allowparams) {
+									$allowparam .= $allowparams['value'].',';
+								}
+							} else if(isset($capabilitie["parameters"]['range']) and is_array($capabilitie["parameters"]['range'])) {
+								$allowparam = 'От '.$capabilitie["parameters"]['range']['min'].' до '.$capabilitie["parameters"]['range']['max'].'. С шагом '.$capabilitie["parameters"]['range']['precision'].' ';
+							} else if(isset($capabilitie["parameters"]['palette']) and is_array($capabilitie["parameters"]['palette'])) {
+								$allowparam = '';
+								foreach($capabilitie["parameters"]['palette'] as $allowparams) {
+									$allowparam .= $allowparams['id'].', ';
+								}
+							} else {
+								$allowparam = '';
+							}
+							
+							//Запросим из БД текущие значения
+							$c_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $c_type . "'");
+							
+							if($allowparam) {
+								$c_rec['ALLOWPARAMS'] = substr($allowparam,0,-1);
+							}
+							$c_rec['VALUE'] = $value;
+							$c_rec['YADEVICE_ID'] = $device_rec['ID'];
+							$c_rec['TITLE'] = $c_type;
+							$c_rec['READONLY'] = 0;
+							$c_rec['UPDATED'] = date('Y-m-d H:i:s');
+							//Если нет такого умения
+							if (empty($c_rec['ID'])) {
+								$c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
+							} else {
+								SQLUpdate('yadevices_capabilities', $c_rec);
+							}
+						}
+					}
+					//Значения датчиков
+					if(isset($device["properties"]) and is_array($device["properties"])) {
+						//Запихнем еще наш статус в массив
+						$onlineArray = [
+							'type' => 'devices.online',
+							'state' => [
+								'value' => $device['state'] == 'online' ? 1 : 0,
+							],
+						];
+						$device["properties"][] = $onlineArray;
+						foreach($device["properties"] as $propertie) {
+							if($propertie['type'] == 'devices.online') {
+								$p_type = $propertie['type'];
+							} else {
+								$p_type = $propertie['type'].'.'.$propertie['parameters']['instance'];
+							}
+							$value = $propertie['state']['value'] ?? '';
+				
+							//Запросим из БД текущие значения
+							$p_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $p_type . "'");
+							$p_rec['VALUE'] = $value;
+							$p_rec['UPDATED'] = date('Y-m-d H:i:s');
+							$p_rec['YADEVICE_ID'] = $device_rec['ID'];
+							$p_rec['TITLE'] = $p_type;
+							$p_rec['READONLY'] = 1;
+							//Если нет такого умения
+							if (empty($p_rec['ID'])) {
+								$p_rec['ID'] = SQLInsert('yadevices_capabilities', $p_rec);
+							} else {
+								SQLUpdate('yadevices_capabilities', $p_rec);
+							}
+						}
+					}
+					$iot_ids[] = $device['id'];
+				}
+			}
+		}
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
+		//dprint($all_devices);
         $total = count($all_devices);
         for ($i = 0; $i < $total; $i++) {
             if (!in_array($all_devices[$i]['IOT_ID'], $iot_ids)) {
+				$this->writeLog('Устройство'.$all_devices[$i]['TITLE'].' удалено.');
                 $this->delete_yadevice($all_devices[$i]['ID']);
             }
         }
-
+		$this->addScenarios();
+		return $data['updates_url'];
     }
 
     function yandex_encode($in)
@@ -697,7 +701,6 @@ class yadevices extends module
         }
         $stations = SQLSelect("SELECT * FROM yastations ORDER BY ID");
         foreach ($stations as $station) {
-            if ($station['PLATFORM'] == "yandex_tv_mt6681_cv") continue; //ЯНДЕКС ТВ ИСКЛЮЧАЕМ
             $station_id = $station['IOT_ID'];
             if (!isset($scenarios[strtolower($station_id)])) {
                 // add scenario
@@ -736,7 +739,7 @@ class yadevices extends module
                 );
                 
                 //dprint($payload, 0);
-                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/', 'POST', $payload);  //xor2016: изменения у Яндекса
+                $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/', 'POST', $payload);
                 //dprint($result, 0);
                 if (isset($result['status']) && $result['status'] == 'ok') {
                     $some_added = 1;
@@ -751,41 +754,15 @@ class yadevices extends module
         }
     }
 
-    function reloadSkills($skill_id)
-    {
-        if ($skill_id) return false;
-
-        $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/skills/' . $skill_id . '/discovery', 'POST', array());
-
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-            if ($result["status"] == 'error') {
-                registerError('YaDevice -> reloadSkills()', 'Ошибка обновления устройств скилла. Ответ от Яндекс: ' . $result["message"]);
-            }
-        } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            if ($result["status"] == 'error') {
-                DebMes('Ошибка обновления устройств скилла. Ответ от Яндекс: ' . $result["message"], 'yadevices');
-            } else {
-                DebMes('Запрошено обновление устройств для скилла: ' . $skill_id, 'yadevices');
-            }
-        }
-
-        return $result;
-    }
 
     function runScenario($scenario_id)
     {
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', array());
 
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-            if ($result["status"] == 'error') {
-                registerError('YaDevice -> runScenario()', 'Ошибка запуска сценария. Ответ от Яндекс: ' . $result["message"]);
-            }
-        } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            if ($result["status"] == 'error') {
-                DebMes('Ошибка запуска сценария. Ответ от Яндекс: ' . $result["message"], 'yadevices');
-            } else {
-                DebMes('Запрошено выполнение сценария: ' . $result["request_id"], 'yadevices');
-            }
+        if ($result["status"] == 'error') {
+            $this->writeLog('Ошибка запуска сценария. Ответ от Яндекс: ' . $result["message"], true);
+        } else {
+            $this->writeLog('Запрошено выполнение сценария: ' . $result["request_id"]);
         }
 
         return $result;
@@ -795,16 +772,10 @@ class yadevices extends module
     {
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id, 'DELETE');
 
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-            if ($result["status"] == 'error') {
-                registerError('YaDevice -> delScenario()', 'Ошибка удаления сценария. Ответ от Яндекс: ' . $result["message"]);
-            }
-        } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            if ($result["status"] == 'error') {
-                DebMes('Ошибка удаления сценария. Ответ от Яндекс: ' . $result["message"], 'yadevices');
-            } else {
-                DebMes('Запрошено удаление сценария: ' . $result["request_id"], 'yadevices');
-            }
+        if ($result["status"] == 'error') {
+            $this->writeLog('Ошибка удаления сценария. Ответ от Яндекс: ' . $result["message"], true);
+        } else {
+            $this->writeLog('Запрошено удаление сценария: ' . $result["request_id"]);
         }
 
         return $result;
@@ -821,13 +792,8 @@ class yadevices extends module
         if (mb_strlen($phrase, 'UTF-8') >= 100) {
             $phrase = mb_substr($phrase, 0, 99, 'UTF-8');
         }
+        $this->writeLog("Sending cloud '$action: $phrase' to " . $station_rec['TITLE']);
 
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            DebMes("Sending cloud '$action: $phrase' to " . $station_rec['TITLE'], 'yadevices');
-        }
-
-
-        //dprint($station_rec);
 
         //$action = 'phrase';
         //phrase_action - просто сказать и не ждать
@@ -867,348 +833,65 @@ class yadevices extends module
                 )
             ))
         );
-        //debmes($payload, 'yadevices');
         $scenario_id = $station_rec['TTS_SCENARIO'];
         $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/v4/user/scenarios/' . $scenario_id, 'PUT', $payload);
-        //DebMes('https://iot.quasar.yandex.ru/m/v4/user/scenarios/' . $scenario_id . " PUT:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
-        //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
 
         if (is_array($result) && $result['status'] == 'ok') {
             $payload = array();
             $result = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . '/actions', 'POST', $payload);
-            //DebMes('https://iot.quasar.yandex.ru/m/user/scenarios/' . $scenario_id . " POST:\n" . json_encode($payload), 'station_' . $station_rec['TITLE']);
-            //DebMes(json_encode($result), 'station_' . $station_rec['TITLE']);
             if (is_array($result) && $result['status'] == 'ok') {
                 return true;
             } else {
-                if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                    registerError('YaDevice -> sendCloudTTS()', 'Ошибка вызова сценария для запуска CloudTTS. Ошибка: ' . json_encode($result));
-                } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                    DebMes("Failed to run TTS scenario: " . json_encode($result), 'yadevices');
-                }
+                $this->writeLog("Fшибка вызова сценария для запуска CloudTTS. Ошибка: " . json_encode($result), true);
             }
         } else {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                registerError('YaDevice -> sendCloudTTS()', 'Ошибка обновления сценария для запуска CloudTTS. Ошибка: ' . json_encode($result) . "<br>" . $result['message']);
-            } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Failed to update TTS scenario: " . json_encode($result) . "\n" . $result['message'], 'yadevices');
-            }
+            $this->writeLog("Ошибка обновления сценария для запуска CloudTTS. Ошибка: " . json_encode($result), true);
         }
         return false;
     }
-    function getAPIUsername()
-    {
-        $oauth_token = $this->getOAuthToken();
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://login.yandex.ru/info?format=json');
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        $headers = array(
-            'Content-type: application/json',
-            'Authorization: ' . $oauth_token
-        );
-        curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLINFO_HEADER_OUT, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
 
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-        // DebMes('getAPIUsername result DBG: ' . $result);
-        $result = json_decode($result);
-        $apiUsername = $result->{'login'};
-        $apiFullname = $result->{'first_name'};
-        // DebMes('getAPIUsername api_username DBG: ' . $apiUsername);
-        // DebMes('getAPIUsername api_fullname DBG: ' . $apiFullname);
-        $this->config['API_USERNAME'] = $apiUsername;
-        $this->config['FULL_NAME'] = $apiFullname;
-        $this->saveConfig();
-    }
-
-    function refreshStations()
+    function onlineStations()
     {
-        if (!isset($this->config['API_USERNAME']) || $this->config['API_USERNAME'] == '') {
-            $this->getAPIUsername();
-        }
         $data = $this->apiRequest('https://quasar.yandex.ru/devices_online_stats');
-        if (is_array($data['items'])) {
+        if (isset($data['items']) and is_array($data['items'])) {
             $items = $data['items'];
             foreach ($items as $item) {
+				//Исключаем приложения на телефоне и ТВ
+				if($item['platform'] == 'alice_app_ios' or $item['platform'] == 'iot_app_android' or $item['platform'] == 'yandex_tv_mt6681_cv') continue;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . $item['id'] . "'");
                 $rec['UPDATED'] = date('Y-m-d H:i:s');
-                if (!$rec['ID']) {
-                    $rec['STATION_ID'] = $item['id'];
-                    $rec['ID'] = SQLInsert('yastations', $rec);
-                }
-                $rec['OWNER'] = $this->config['API_USERNAME'];
+                /*$rec['OWNER'] = $this->config['API_USERNAME'];
                 $rec['TITLE'] = $item['name'];
                 $rec['ICON_URL'] = $item['icon'];
                 $rec['PLATFORM'] = $item['platform'];
-                $rec['SCREEN_CAPABLE'] = (int)$item['screen_capable'];
-                $rec['SCREEN_PRESENT'] = (int)$item['screen_present'];
-                $rec['IS_ONLINE'] = (int)$item['online'];
-                SQLUpdate('yastations', $rec);
+				*/
+				if($rec['IS_ONLINE'] != (int)$item['online']){
+					$rec['IS_ONLINE'] = (int)$item['online'];
+					SQLUpdate('yastations', $rec);
+					$params['NEW_VALUE'] = (int)$item['online'];
+					$property = SQLSelectOne("SELECT yadevices_capabilities.* FROM yadevices_capabilities LEFT JOIN yadevices ON yadevices_capabilities.YADEVICE_ID=yadevices.ID WHERE yadevices.IOT_ID LIKE '" . $rec['IOT_ID'] . "' AND yadevices_capabilities.TITLE LIKE 'cloud.online'");
+					$this->setProperty($property, (int)$item['online'], $params);
+					$property['VALUE'] =(int)$item['online'];
+					$property['UPDATED'] = date('Y-m-d H:i:s');
+					SQLUpdate('yadevices_capabilities', $property);
+					//Отправляем плееру в ws, если станция пропала
+					postToWebSocket('YADEVICES_ONLINE_'.$rec['ID'], ['online'=>$item['online']], 'PostEvent');
+				}
             }
-        }
-        //Удаляем станции не принадлежащие этой учетке
-        SQLExec("DELETE FROM yastations WHERE OWNER != '" . $this->config['API_USERNAME'] . "'");
-
-        $this->addScenarios();
-    }
-
-    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
-    {
-
-        $debug = 0;
-
-        if ($method != 'GET' && !isset($this->csrf_token)) {
-            $token = $this->getToken();
-        }
-
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        if ($method == 'GET') {
-            curl_setopt($YaCurl, CURLOPT_POST, false);
-        } else {
-            $headers = array(
-                'Content-type: application/json',
-                'x-csrf-token: ' . $this->csrf_token
-            );
-            curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($YaCurl, CURLOPT_POST, true);
-            if ($method != 'POST') {
-                curl_setopt($YaCurl, CURLOPT_CUSTOMREQUEST, $method);
-            } else {
-                //curl_setopt($YaCurl, CURLOPT_POST, true);
-            }
-            if (is_array($params)) {
-                curl_setopt($YaCurl, CURLOPT_POSTFIELDS, json_encode($params)); //, JSON_UNESCAPED_SLASHES
-            }
-        }
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLINFO_HEADER_OUT, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        //curl_setopt($YaCurl, CURLOPT_HEADER, true);
-
-        $result = curl_exec($YaCurl);
-        $info = curl_getinfo($YaCurl);
-        curl_close($YaCurl);
-
-        $request_headers = isset($info['request_header']) ? $info['request_header'] : '';
-        if ($debug) {
-            dprint("REQUEST HEADERS:",false);
-            dprint($request_headers,false);
-        }
-        $result_code = $info['http_code'];
-        $data = json_decode($result, true);
-
-        if (!is_array($data) && $debug) {
-            dprint($method." ".$url.'<br/>'.$result,false);
-        }
-
-        if (!$repeating &&
-            (!isset($data['code']) || $data['code']!= 'BAD_REQUEST') &&   
-            ($result_code==403 || (isset($data['status']) && $data['status'] == 'error'))
-        ) {
-            if ($debug) {
-                dprint("REPEATING: ".$method." ".$url,false);
-            }
-            $this->csrf_token = '';
-            $data = $this->apiRequest($url, $method, $params, 1);
-        }
-        return $data;
-    }
-
-    function getCSRFToken($cookie_file = YADEVICES_COOKIE_PATH) {
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://passport.yandex.ru/am?app_platform=android');
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie_file);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, $cookie_file);
-        curl_setopt($YaCurl, CURLOPT_HEADER, 1);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_VERBOSE, false);
-        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-
-        if (preg_match('/"csrf_token" value="(.+?)"/', $result, $m)) {
-            $token = $m[1];
-            return $token;
-        } else {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Failed to get CSRF token:\n" . $result, 'yadevices');
-            }
-            return false;
         }
     }
 
-    function getToken($url = 'https://yandex.ru/quasar/iot')
-    {
-        //Получение токенов для отправки запросов в Яндекс
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_HEADER, 1);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($YaCurl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-        curl_setopt($YaCurl, CURLOPT_ENCODING, 'gzip');
-        curl_setopt($YaCurl, CURLOPT_VERBOSE, false);
-
-        curl_setopt($YaCurl, CURLOPT_FOLLOWLOCATION, 1);
-
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-
-        if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
-            $token = $m[1];
-            $this->csrf_token = $token;
-            return $token;
-        } else {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                registerError('YaDevice -> getToken()', 'Ошибка получения csrfToken2 токена');
-            } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Ошибка получения csrfToken2 токена", 'yadevices');
-            }
-            return false;
-        }
-    }
-
-    function getOAuthToken($force = false)
-    {
-        if ($force) $oauth_token = '';
-        else $oauth_token = $this->config['OAUTH_TOKEN'];
-
-        if ($oauth_token != '') return $oauth_token;
-
-        $post = array(
-            'client_secret' => 'ad0a908f0aa341a182a37ecd75bc319e',
-            'client_id' => 'c0ebe342af7d48fbbbfcf2d2eedb8f9e',
-        );
-        $postvars = '';
-        foreach($post as $key=>$value) {
-            $postvars .= $key . "=" . urlencode($value) . "&";
-        }
-
-        $cookie_data = LoadFile(YADEVICES_COOKIE_PATH);
-        $new_cookies = array();
-        $lines = explode("\n",$cookie_data);
-        foreach($lines as $line) {
-            if (!preg_match('/^(.*?)\.yandex\.ru/',$line)) continue;
-            $values = explode("\t",$line);
-            $cookie_title = $values[5];
-            $cookid_value = $values[6];
-            if ($cookie_title == 'yaexpflags') continue;
-            $new_cookies[]=$cookie_title.'='.$cookid_value;
-        }
-        $cookies_line = implode("; ",$new_cookies);
-        $headers = array(
-            'Ya-Client-Host: passport.yandex.ru',
-            'Ya-Client-Cookie: ' . $cookies_line
-        );
-
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://mobileproxy.passport.yandex.net/1/bundle/oauth/token_by_sessionid');
-        curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($YaCurl, CURLOPT_POST, true);
-        curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-
-        $data = json_decode($result, true);
-
-        if (!$data['access_token']) {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Failed to get access token:\n" . $result, 'yadevices');
-            }
-            return false;
-        }
-        // getAuth token
-        $post = array(
-            'client_secret' => '53bc75238f0c4d08a118e51fe9203300',
-            'client_id' => '23cabbbdc6cd418abb4b39c32c41195d',
-            'grant_type' => 'x-token',
-            'access_token' => $data['access_token'],
-        );
-        $postvars = '';
-        foreach($post as $key=>$value) {
-            $postvars .= $key . "=" . urlencode($value) . "&";
-        }
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_URL, 'https://oauth.mobile.yandex.net/1/token');
-        curl_setopt($YaCurl, CURLOPT_POST, true);
-        curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $postvars);
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_COOKIEJAR, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-        $result = curl_exec($YaCurl);
-        curl_close($YaCurl);
-
-        $data = json_decode($result,true);
-        if (!$data['access_token']) {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Failed to get x-token token:\n" . $result, 'yadevices');
-            }
-            return false;
-        }
-        $oauth_token = $data['access_token'];
-        $this->config['OAUTH_TOKEN'] = $oauth_token;
-        $this->saveConfig();
-        return $oauth_token;
-    }
-
-    function getDeviceToken($device_id, $platform, $force = false)
-    {
-        $oauth_token = $this->getOAuthToken();
-        if (!$oauth_token) return false;
-
-        $url = "https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
-
-        $YaCurl = curl_init();
-        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
-        curl_setopt($YaCurl, CURLOPT_URL, $url);
-        curl_setopt($YaCurl, CURLOPT_POST, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
-
-        $header = array();
-        $header[] = 'Content-type: application/json';
-        $header[] = 'Authorization: Oauth ' . $oauth_token;
-
-        curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $header);
-        $result = curl_exec($YaCurl);
-
-        //dprint($result);
-
-        $data = json_decode($result, true);
-        if ($data['status'] == 'ok' && $data['token']) {
-            //Запишем токен
-            SQLExec("UPDATE yastations SET DEVICE_TOKEN = '" . dbSafe($data['token']) . "' WHERE STATION_ID = '" . dbSafe($device_id) . "'");
-            return $data['token'];
-        } else {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                DebMes("Failed to get device local token:\n" . $result, 'yadevices');
-            }
-            return false;
-        }
-
-    }
-
+	 //Запись в привязанное свойство/метод
+	function setProperty($device, $value, $params = [], $type = ''){
+		if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_PROPERTY'])) {
+			setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, array($this->name=>1), $this->name . '.' . $type);
+		}
+		if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_METHOD'])) {
+			$params['VALUE'] = $value;
+			callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
+		}
+	}
+	
     /**
      * FrontEnd
      *
@@ -1218,94 +901,43 @@ class yadevices extends module
      */
     function usual(&$out)
     {
-        $this->admin($out);
-
+        //$this->admin($out);
+		//dprint($out, 0);
         //Функции плеера
-        global $station;
-        if (empty($station)) {
-            $station = $this->id;
-            if (empty($station)) {
-                $station = $this->station;
-            }
-        }
+		$station = gr('station');
+		if (empty($station)) $station = $this->id ?? $this->station;
+		$out['STATION_ID'] = $station;
 
-        global $bgcolor;
-        if (empty($bgcolor)) {
-            $bgcolor = $this->bgcolor;
-        }
-        if (!$bgcolor) $bgcolor = '0,0,0';
+		//$bgcolor = gr('bgcolor');
+        $bgcolor = $this->bgcolor ?? '0,0,0';
         $out['BGCOLOR'] = $bgcolor;
 
-        global $textcolor;
-        if (empty($textcolor)) {
-            $textcolor = isset($this->textcolor) ? $this->textcolor : '';
-        }
-        if (!$textcolor) $textcolor = 'white';
+
+        $textcolor = $this->textcolor ?? 'white';
         $out['TEXTCOLOR'] = $textcolor;
 
-        //if(empty((int)$station)) {
-        //	http_response_code(400);
-        //	die();
-        //}
-
-        $out['STATION_ID'] = $station;
-        global $update;
-        if (empty($update)) {
-            $update = $this->update;
-        }
-
-        if ($update < 1 || $update) $update = 5;
-        $out['UPDATE_TIME'] = $update;
-
-        global $zoom;
-        if (empty($zoom)) {
-            $zoom = $this->zoom;
-        }
+        $zoom = $this->zoom ?? '';
         $out['ZOOM_PLAYER'] = $zoom;
 
         $ajax = gr('ajax');
 
-        $rec = SQLSelectOne("SELECT TITLE FROM yastations WHERE ID = '" . dbSafe($station) . "'");
-        $out['TITLE'] = $rec['TITLE'];
-
+        $rec = SQLSelectOne("SELECT * FROM yastations WHERE ID = '" . dbSafe($station) . "'");
+		if (!$rec) {
+            http_response_code(400);
+            die();
+        }
+		$out['TITLE'] = $rec['TITLE'];
+		
         if ($ajax && $station && $out['TITLE']) {
             header("HTTP/1.0: 200 OK\n");
             header('Content-Type: text/html; charset=utf-8');
-            $control = gr('control');
-
-            if (!empty(strip_tags($control))) {
-                if ($control == 'prev') {
-                    $cmdToStation = 'предыдущий трек';
-                } else if ($control == 'play') {
-                    $cmdToStation = 'продолжи песню';
-                } else if ($control == 'pause') {
-                    $cmdToStation = 'пауза';
-                } else if ($control == 'next') {
-                    $cmdToStation = 'следующий трек';
-                } else if ($control == 'volDown') {
-                    $cmdToStation = 'тише';
-                } else if ($control == 'volUp') {
-                    $cmdToStation = 'громче';
-                }
-
-                callAPI('/api/module/yadevices', 'GET', array('station' => $station, 'command' => $cmdToStation));
-
+            $command = gr('control');
+            if (!empty(strip_tags($command))) {
+                $this->sendCommandToStation($rec, $command);
                 echo json_encode(array('status' => 'ok'));
             } else {
-                $this->getToken();
-
-                $rec = SQLSelectOne("SELECT IP, PLATFORM, STATION_ID FROM yastations WHERE ID = '" . dbSafe($station) . "'");
-
-                $rec['DEVICE_TOKEN'] = $this->getDeviceToken($rec['STATION_ID'], $rec['PLATFORM']);
-
-                if (!$rec) {
-                    http_response_code(400);
-                    die();
-                }
-
-                $status = $this->getStatus($rec['DEVICE_TOKEN'], $rec['IP']);
-
-                echo json_encode($status);
+				usleep(200000);
+				$this->sendCommandToStation($rec, 'playerState');
             }
             exit;
         }
@@ -1366,6 +998,8 @@ class yadevices extends module
     function delete_yastations($id)
     {
         $rec = SQLSelectOne("SELECT * FROM yastations WHERE ID='$id'");
+		$device = SQLSelectOne("SELECT ID FROM yadevices WHERE IOT_ID='".$rec['IOT_ID']."'");
+		$this->delete_yadevice($device['ID']);
         // some action for related tables
         SQLExec("DELETE FROM yastations WHERE ID='" . $rec['ID'] . "'");
     }
@@ -1383,11 +1017,9 @@ class yadevices extends module
         SQLExec("DELETE FROM yadevices WHERE ID=" . (int)$id);
     }
 
-    function sendDataToStation($command, $token, $ip, $port = 1961, $dopParam = 0)
+    function sendGlagol($command, $data, $token, $ip)
     {
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            DebMes("Отправляем команду '$command' на устройство $ip", 'yadevices');
-        }
+        $this->writeLog("Отправляем команду '$data' на устройство $ip");
 
         $clientConfig = new ClientConfig();
         $clientConfig->setHeaders([
@@ -1397,36 +1029,15 @@ class yadevices extends module
         $msg = array(
             'conversationToken' => $token,
             'id' => uniqid(''),
-            'sentTime' => time() * 1000000000,
-            'payload' => array(
-//                'command' => 'sendText',
-//               'text' => $command,
-            )
+            'sentTime' => time() * 1000,
         );
-
-        if ($dopParam && ($command == 'setVolume')) {
-            $msg['payload']['command'] = $command;
-            $msg['payload']['volume'] = (float)$dopParam;
-        } else {
-            $msg['payload']['command'] = 'sendText';
-            $msg['payload']['text'] = $command;
-        }
-        $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
-        $client->send(json_encode($msg));
+        $client = new WebSocketClient('wss://' . $ip . ':' . GLAGOL_PORT . '/', $clientConfig);
+        $client->send($this->message($command, $data, $token));
         $result = $client->receive();
 
         $result_data = json_decode($result, true);
 
         if (is_array($result_data)) {
-            if (mb_stripos($command, 'повтори за мной') === 0) {
-                while (($status = $this->getStatus($token, $ip, $port)) && is_array($status) && ($status['state']['aliceState'] != 'LISTENING')) {
-                    usleep(500000);
-                    if ($status['state']['aliceState'] == 'IDLE') {
-                        break;
-                    }
-                }
-                $this->stopListening($token, $ip, $port);
-            }
             $client->close();
             return $result_data;
         }
@@ -1434,43 +1045,7 @@ class yadevices extends module
 
     }
 
-    function stopListening($token, $ip, $port = 1961)
-    {
-        if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-            DebMes("Останавливаем прослушивание сокета $ip", 'yadevices');
-        }
-
-        $clientConfig = new ClientConfig();
-        $clientConfig->setHeaders([
-            'X-Origin' => 'http://yandex.ru/',
-        ]);
-        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $msg = array(
-            'conversationToken' => $token,
-            'payload' => array(
-                'command' => 'serverAction',
-                'serverActionEventPayload' => array(
-                    'type' => 'server_action',
-                    'name' => 'on_suggest'
-                )
-            )
-        );
-
-        $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
-        $client->send(json_encode($msg));
-        $result = $client->receive();
-        $client->close();
-        $result_data = json_decode($result, true);
-        //var_dump($result_data);
-
-        if (is_array($result_data)) {
-            return $result_data;
-        }
-        return false;
-
-    }
-
-    function getStatus($token, $ip, $port = 1961)
+    function getStatus($token, $ip)
     {
         $clientConfig = new ClientConfig();
         $clientConfig->setHeaders([
@@ -1480,16 +1055,16 @@ class yadevices extends module
         $msg = array(
             'conversationToken' => $token,
             'payload' => array(
-                'command' => 'ping',
+                'command' => '',
             )
         );
 
-        $client = new WebSocketClient('wss://' . $ip . ':' . $port . '/', $clientConfig);
+        $client = new WebSocketClient('wss://' . $ip . ':' . GLAGOL_PORT . '/', $clientConfig);
         $client->send(json_encode($msg));
         $result = $client->receive();
         $client->close();
         $result_data = json_decode($result, true);
-        //DebMes($result_data['state']['aliceState']);
+		//$this->writeLog($result);
         if (is_array($result_data)) {
             return $result_data;
         }
@@ -1498,44 +1073,36 @@ class yadevices extends module
     }
 
 
-    function sendCommandToStationCloud($id, $command, $dopParam = 0)
+    function sendCommandToStationCloud($id, $command, $data = 0)
     {
         if (!$command) return false;
         $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
-        $this->sendCloudTTS($station['IOT_ID'], $command, $dopParam);
+        $this->sendCloudTTS($station['IOT_ID'], $command, $data);
     }
 
-    function sendCommandToStation($id, $command, $dopParam = 0)
+    function sendCommandToStation($station, $command, $data = '')
     {
         if (!$command) return false;
 
-        $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
         if (!$station['ID'] || !$station['IP']) return false;
 
-        $this->getToken();
-        $token = $this->getDeviceToken($station['STATION_ID'], $station['PLATFORM']);
+        /*$token = $this->getDeviceToken($station['STATION_ID'], $station['PLATFORM']);
 
         if (!$token) return false;
-
         $station['DEVICE_TOKEN'] = $token;
         SQLUpdate('yastations', $station);
+*/
 
-
-        if ($station['DEVICE_TOKEN']) {
-            if ($dopParam && ($command == 'setVolume')) {
-                $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'], $station['IP'], 1961, $dopParam);
-            } else {
-                $result = $this->sendDataToStation($command, $station['DEVICE_TOKEN'], $station['IP']);
-            }
+        if (isset($station['DEVICE_TOKEN']) and !empty($command)) {
+			if($data != '') $data = '^' . $data;
+			addToOperationsQueue('yadevices', $station['IOT_ID'], $command . $data);
+			return true;
+			$result = $this->sendGlagol($command, $data, $station['DEVICE_TOKEN'], $station['IP']);
             if (is_array($result)) {
                 return true;
             }
         } else {
-            if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                registerError('YaDevice -> sendCommandToStation()', 'Перед тем, как отправлять команды на станцию - сформируйте токен доступа!');
-            } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                debMes('sendCommandToStation() -> Перед тем, как отправлять команды на станцию - сформируйте токен доступа!', 'yadevices');
-            }
+            $this->writeLog('sendCommandToStation() -> Перед тем, как отправлять команды на станцию - сформируйте токен доступа!', true);
         }
     }
 
@@ -1544,7 +1111,7 @@ class yadevices extends module
         $this->getConfig();
 
         if ($event == 'SAY' || $event == 'ASK') {
-            DebMes("$event: " . json_encode($details), 'yadevices');
+            //$this->writeLog("$event: " . json_encode($details, JSON_UNESCAPED_UNICODE));
         }
 
         if ($event == 'ASK') {
@@ -1556,7 +1123,7 @@ class yadevices extends module
             }
             $stations = SQLSelect("SELECT * FROM yastations WHERE " . $qry);
             foreach ($stations as $station) {
-                callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'попроси навык дом мажордом задать вопрос "' . $message . '"'));
+                callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'command', 'data' => 'попроси навык дом мажордом задать вопрос "' . $message . '"'));
             }
         }
 
@@ -1564,8 +1131,8 @@ class yadevices extends module
             $level = (int)$details['level'];
             $message = $details['message'];
 
-            // TTS CLOUD
-            $qry = "TTS=2 AND IOT_ID!=''";
+            // TTS LOCAL & CLOUD
+            $qry = "TTS=1 OR TTS=2 AND IOT_ID!=''";
             if (isset($details['destination'])) {
                 $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
@@ -1579,29 +1146,9 @@ class yadevices extends module
                 }
                 if ($level >= $min_level) {
                     //$this->sendCloudTTS($station['IOT_ID'],$message);
-                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'say' => $message));
+                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
                 }
             }
-
-            //TTS LOCAL
-            $qry = "TTS=1";
-            if (isset($details['destination'])) {
-                $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
-            }
-            $stations = SQLSelect("SELECT * FROM yastations WHERE ".$qry);
-            foreach ($stations as $station) {
-                $min_level = 0;
-                if ($station['MIN_LEVEL_TEXT'] != '') {
-                    $min_level = processTitle($station['MIN_LEVEL_TEXT']);
-                } elseif ($station['MIN_LEVEL']) {
-                    $min_level = $station['MIN_LEVEL'];
-                }
-                if ($level >= $min_level) {
-                    //$this->sendCommandToStation($station['ID'], 'повтори за мной ' . $message);
-                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'say' => $message));
-                }
-            }
-
         }
     }
 
@@ -1621,7 +1168,7 @@ class yadevices extends module
                     'type' => $command_type[0] . '.' . $command_type[1] . '.' . $command_type[2]
                 )));
 
-            //debMes(json_encode($data));
+            //print_r(json_encode($data));
 
             $result = $this->apiRequest($url, 'POST', $data);
             return $result;
@@ -1686,28 +1233,36 @@ class yadevices extends module
         $total = count($properties);
         for ($i = 0; $i < $total; $i++) {
             if ($properties[$i]['READONLY'] == 0) {
-                $sendCMD = $this->sendValueToYandex($properties[$i]['IOT_ID'], $properties[$i]['TITLE'], $value);
-                $sendCMD = json_encode($sendCMD);
-                $sendCMD = json_decode($sendCMD);
-
-                if ($sendCMD->status == 'ok') {
-                    //Обновим в теблице, чтобы не дергать лишний раз
-                    $this->refreshDevicesData($properties[$i]['YADEVICE_ID']);
-
-                    debMes('sendValueToYandex() -> Успешно! ' . $object . '.' . $property . ' = ' . $value, 'yadevices');
-                } else {
-                    if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                        registerError('YaDevice -> sendValueToYandex()', 'Неверная команда: ' . $object . '.' . $property . ' = ' . $value . '<br>Вызов из: ' . $object . '.' . $property . '<br>');
-                    } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                        debMes('sendValueToYandex() -> Неверная команда: ' . $object . '.' . $property . ' = ' . $value, 'yadevices');
-                    }
-                }
+				//если имя начинается с local
+				if(stripos($properties[$i]['TITLE'], 'local') !== false){
+					    // Добавление в очередь, которая обрабатывается в цикле
+						$command = str_replace('local.', '', $properties[$i]['TITLE']);
+						if($command == 'other'){
+							$command = trim(stristr($value, ':', true));
+							$value = trim(stristr($value, ':'), ' \n\r\t\v\x00\:');
+						} else if($command == 'volume'){
+							if($value == 'volumeUp' or $value == 'volumeDown') $command = $value;
+							else $command == 'setVolume';
+						}
+						addToOperationsQueue('yadevices', $properties[$i]['IOT_ID'], $command . '^' . $value);
+				} else if(stripos($properties[$i]['TITLE'], 'cloud') !== false){
+					    // Отправляем в облако
+						$command = str_replace('cloud.', '', $properties[$i]['TITLE']);
+						if($command == 'command') $command = 'text_action';
+						else if($command == 'text') $command = 'phrase_action';
+						$this->sendCloudTTS($properties[$i]['IOT_ID'], $value, $command);
+				} else {
+					$sendCMD = $this->sendValueToYandex($properties[$i]['IOT_ID'], $properties[$i]['TITLE'], $value);
+					$sendCMD = json_encode($sendCMD);
+	
+					if ($sendCMD->status == 'ok') {
+						$this->writeLog('sendValueToYandex() -> Успешно! ' . $object . '.' . $property . ' = ' . $value);
+					} else {
+						$this->writeLog('sendValueToYandex() -> Неверная команда: ' . $object . '.' . $property);
+					}					
+				}
             } else {
-                if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
-                    registerError('YaDevice -> sendValueToYandex()', 'Свойство ' . $properties[$i]['TITLE'] . ' доступно только для чтения!<br>Вызов из: ' . $object . '.' . $property . '<br>');
-                } else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-                    debMes('sendValueToYandex() -> Свойство ' . $properties[$i]['TITLE'] . ' доступно только для чтения!', 'yadevices');
-                }
+                 $this->writeLog('sendValueToYandex() -> Свойство ' . $properties[$i]['TITLE'] . ' доступно только для чтения!', true);
             }
         }
     }
@@ -1773,6 +1328,20 @@ class yadevices extends module
      */
     function dbInstall($data)
     {
+		//Получим список существующих столбцов
+		$query = mysqli_fetch_all(SQLExec("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'yastations'"), MYSQLI_NUM);
+		$rename = 0;
+		//Пройдёмся по именам циклом
+		foreach($query as $name) {
+			if($name[0] == 'TTS_EFFECT') $rename = 1;
+		}
+		//Переименовываем, если необходимо
+		if($rename){
+			SQLExec("ALTER TABLE `yastations` CHANGE COLUMN `TTS_EFFECT` `ARTIST` VARCHAR(255) NOT NULL DEFAULT ''");
+			SQLExec("ALTER TABLE `yastations` CHANGE COLUMN `TTS_ANNOUNCE` `TRACK` VARCHAR(255) NOT NULL DEFAULT ''");
+			SQLExec("ALTER TABLE `yastations` CHANGE COLUMN `SCREEN_CAPABLE` `COVER` VARCHAR(255) NOT NULL DEFAULT ''");
+			SQLExec("ALTER TABLE `yastations` CHANGE COLUMN `SCREEN_PRESENT` `PLAYING` INT(3) NOT NULL DEFAULT '0'");;
+		}
         /*
         yastations -
         */
@@ -1790,10 +1359,11 @@ class yadevices extends module
  yastations: ICON_URL varchar(255) NOT NULL DEFAULT ''
  yastations: DEVICE_TOKEN varchar(255) NOT NULL DEFAULT ''
  yastations: TTS_SCENARIO varchar(255) NOT NULL DEFAULT ''
- yastations: TTS_EFFECT varchar(255) NOT NULL DEFAULT ''
- yastations: TTS_ANNOUNCE varchar(255) NOT NULL DEFAULT ''
- yastations: SCREEN_CAPABLE int(3) NOT NULL DEFAULT '0'
- yastations: SCREEN_PRESENT int(3) NOT NULL DEFAULT '0'
+ yastations: ARTIST varchar(255) NOT NULL DEFAULT ''
+ yastations: TRACK varchar(255) NOT NULL DEFAULT ''
+ yastations: COVER varchar(255) NOT NULL DEFAULT ''
+ yastations: PLAYING int(3) NOT NULL DEFAULT '0'
+ yastations: VOLUME int(3) NOT NULL DEFAULT '0'
  yastations: IS_ONLINE int(3) NOT NULL DEFAULT '0'
  yastations: UPDATED datetime
 
@@ -1801,6 +1371,9 @@ class yadevices extends module
  yadevices: TITLE varchar(255) NOT NULL DEFAULT ''
  yadevices: IOT_ID varchar(255) NOT NULL DEFAULT ''
  yadevices: DEVICE_TYPE varchar(100) NOT NULL DEFAULT ''
+ yadevices: HOUSE varchar(100) NOT NULL DEFAULT ''
+ yadevices: ROOM varchar(100) NOT NULL DEFAULT ''
+ yadevices: SKILL_ID varchar(100) NOT NULL DEFAULT ''
  yadevices: UPDATED datetime
 
  yadevices_capabilities: ID int(10) unsigned NOT NULL auto_increment
@@ -1817,6 +1390,562 @@ class yadevices extends module
 EOD;
         parent::dbInstall($data);
     }
+	
+///////////////////////////////////////////////Утилиты////////////////////////////////////////////////////////
+    function apiRequest($url, $method = 'GET', $params = 0, $repeating = 0)
+    {
+        $debug = 0;
+
+        if ($method != 'GET' && !isset($this->csrf_token)) {
+            $token = $this->getToken();
+        }
+
+        $YaCurl = curl_init();
+        curl_setopt($YaCurl, CURLOPT_URL, $url);
+		curl_setopt($YaCurl, CURLOPT_TIMEOUT, 5);
+        curl_setopt($YaCurl, CURLOPT_COOKIEFILE, YADEVICES_COOKIE_PATH);
+        if ($method == 'GET') {
+            curl_setopt($YaCurl, CURLOPT_POST, false);
+        } else {
+            $headers = array(
+                'Content-type: application/json',
+                'x-csrf-token: ' . $this->csrf_token
+            );
+            curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($YaCurl, CURLOPT_POST, true);
+            if ($method != 'POST') {
+                curl_setopt($YaCurl, CURLOPT_CUSTOMREQUEST, $method);
+            }
+            if (is_array($params)) {
+                curl_setopt($YaCurl, CURLOPT_POSTFIELDS, json_encode($params)); 
+			}
+        }
+        curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($YaCurl, CURLINFO_HEADER_OUT, true);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
+        $result = curl_exec($YaCurl);
+        $info = curl_getinfo($YaCurl);
+        curl_close($YaCurl);
+		if($result == 'Unauthorized'){
+			$this->writeLog('Ошибка авторизации! Облачные функции недоступны!', true);
+			$this->getConfig();
+			$this->config['AUTHORIZED'] = 0;
+			$this->saveConfig;
+			return 'Unauthorized';
+		}
+        $request_headers = isset($info['request_header']) ? $info['request_header'] : '';
+        if ($debug) {
+            dprint("REQUEST HEADERS:",false);
+            dprint($request_headers,false);
+        }
+        $result_code = $info['http_code'];
+        $data = json_decode($result, true);
+
+        if (!is_array($data) && $debug) {
+            dprint($method." ".$url.'<br/>'.$result,false);
+        }
+        if (!$repeating &&
+            (!isset($data['code']) || $data['code']!= 'BAD_REQUEST') &&   
+            ($result_code==403 || (isset($data['status']) && $data['status'] == 'error'))
+        ) {
+            if ($debug) {
+                dprint("REPEATING: ".$method." ".$url,false);
+            }
+            $this->csrf_token = '';
+            $data = $this->apiRequest($url, $method, $params, 1);
+        }
+        return $data;
+    }
+
+
+	function curl($url, $cookie = '', $headers = '', $post = '', $options = ''){
+		$YaCurl = curl_init();
+		curl_setopt($YaCurl, CURLOPT_URL, $url);
+		curl_setopt($YaCurl, CURLOPT_TIMEOUT, 3);
+		if($headers != '') curl_setopt($YaCurl, CURLOPT_HTTPHEADER, $headers);
+		if($post != ''){
+			curl_setopt($YaCurl, CURLOPT_POST, true);
+			curl_setopt($YaCurl, CURLOPT_POSTFIELDS, $post);
+		} else {
+			curl_setopt($YaCurl, CURLOPT_POST, false);
+		}
+		curl_setopt($YaCurl, CURLOPT_RETURNTRANSFER, true);
+		if($cookie != '') curl_setopt($YaCurl, CURLOPT_COOKIEFILE, $cookie);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($YaCurl, CURLOPT_SSL_VERIFYHOST, false);
+		
+		//Подключим дополнительные опции
+		if(is_array($options)){
+			foreach($options as $option => $value){
+				curl_setopt($YaCurl, $option, $value);
+			}
+		}		
+		$result = curl_exec($YaCurl);
+		if(curl_error($YaCurl)) {
+			$result = '{"error:"'.curl_error($YaCurl).'"}';
+		}
+        curl_close($YaCurl);
+		return $result;
+	} 
+
+	// V.A.S.t
+	function message($command, $data, $token, $id = ''){
+		//Если есть дополнительные параметры в комаде, через запятую
+		//Для gif можно отправлять endless - для бесконечного воспроизведения или till_end_of_speech - анимация будет проигрываться, пока Алиса говорит (сперва запускаем разговор, потом анимацию)(Не работает)
+		$param = '';
+		if($id == '') $id = uniqid('');
+		if(strpos($command, ',')){
+			$arg = explode(',', $command);
+			$command = $arg[0];
+			$param = ',"'. $arg[1] . '":true'; 
+		}
+		$msg = array(
+			'conversationToken' => $token,
+			'id' => $id,
+			'sentTime' => time() * 1000,
+		);
+		switch($command){
+			case 'setVolume':
+				$msg['payload'] = ["command" => "setVolume", "volume" => (float)$data];
+				break;
+			case 'volumeUp':
+				$msg['payload'] = $this->external_command('sound_louder');
+				break;
+			case 'volumeDown':
+				$msg['payload'] = $this->external_command('sound_quiter');
+				break;
+			case 'text':
+				$msg['payload'] = $this->update_form('personal_assistant.scenarios.quasar.iot.repeat_phrase', ['phrase_to_repeat' => $data]);
+				break;
+			case 'command':
+				$msg['payload'] = ["command" => "sendText", "text" => $data];
+				break;
+			case 'dialog':
+				$msg['payload'] = $this->update_form('personal_assistant.scenarios.repeat_after_me', ['request' => $this->fix_dialog_text($data)]);
+				break;
+			case 'gif':
+				$msg['payload'] = $this->external_command('draw_led_screen', '{"animation_sequence":[{"frontal_led_image":"'.$data.'"'.$param.'}]}');
+				break;
+			case 'rewind':
+				$msg['payload'] = ["command" => "rewind", "position" => (int)$data];
+				break;
+			case 'ping':
+			case 'softwareVersion':
+			case 'play':
+			case 'stop':
+			case 'prev':
+			case 'next':
+				$msg['payload'] = ["command" => $command];
+				break;
+			case 'repeat': //All, One, None
+				$msg['payload'] = ["command" => "repeat", "mode" => $data];
+				break;
+			case 'shuffle': //bool
+				$msg['payload'] = ["command" => "shuffle", "enable" => $data];
+				break;
+			case 'turnOn':
+				$msg['payload'] = $this->update_form('personal_assistant.scenarios.player_continue');
+				break;
+			case 'turnOff':
+				$msg['payload'] = $this->update_form('personal_assistant.scenarios.quasar.go_home');
+				break;
+			case 'playerState':
+				$msg['payload'] = ["command" => "ping"];
+				break;
+			case 'audio':
+				$url = $this->extractMediaId($data);
+				if($url != false){
+					if($url['type'] == 'music_item'){
+						$msg['payload'] = ["command" => "playMusic", "type" => $url['type_item'], 'id' => $url['id']];
+					} else if($url['type'] == 'music_playlist'){
+						$data = json_decode($this->curl("https://api.music.yandex.net/users/{$url['user']}/playlists/{$url['playlist_id']}"), true);
+						if(isset($data['result']['owner']['uid'])) $user_id = $data['result']['owner']['uid'];
+						else return false;
+						$msg['payload'] = ["command" => "playMusic", "type" => "playlist", 'id' => $user_id . ":" . $url['playlist_id']];
+					} else if($url['type'] == 'bookmate'){
+						$data = json_decode($this->curl("https://api-gateway-rest.bookmate.yandex.net/audiobook/album", '', array(
+		'Content-Type: application/json; charset=UTF-8'), json_encode(["audiobook_uuid" => $url['id']])), true);
+						if(isset($data['album_id'])) $album_id = $data['album_id'];
+						else return false;
+						$msg['payload'] = ["command" => "playMusic", "type" => "album", 'id' => $album_id];
+					}
+				} else {
+					$msg['payload'] = $this->external_command('radio_play', '{"streamUrl":"'.$data.'"'.$param.'}');
+				}
+				break;
+			case 'video':
+				$url = $this->extractMediaId($data);
+				if($url != false){
+					if($url['type'] == 'youtube' or $url['type'] == 'kinopoisk' or $url['type'] == 'strm' or $url['type'] == 'yavideo'){
+						$msg['payload'] = $this->play_video_by_descriptor($url['type'], $url['id']);
+					} else if($url['type'] == 'vk'){
+						$msg['payload'] = $this->play_video_by_descriptor('yavideo', 'https://vk.com/' . $url['id']);
+					} else if($url['type'] == 'kinopoisk_id'){
+						$data = json_decode($this->curl("https://ott-widget.kinopoisk.ru/ott/api/kp-film-status/?kpFilmId=".$url['id']), true);
+						if(isset($data['uuid'])) $uuid = $data['uuid'];
+						else return false;
+						$msg['payload'] = $this->play_video_by_descriptor('kinopoisk', $url['id']);
+					}
+				}
+				break;
+			 default:
+				$msg['payload'] = $this->update_form('personal_assistant.scenarios.quasar.iot.repeat_phrase', ['phrase_to_repeat' => $command]);
+		}
+		//print_r($msg);
+		//print json_encode($msg, JSON_NUMERIC_CHECK );
+		return json_encode($msg, JSON_NUMERIC_CHECK);
+	}
+	
+	function extractMediaId(string $url)
+	{
+		$patterns = [
+			'youtube' => '/https:\/\/(?:youtu\.be\/|www\.youtube\.com\/.+?v=)([0-9A-Za-z_-]{11})/',
+			'kinopoisk' => '/https:\/\/hd\.kinopoisk\.ru\/.*([0-9a-z]{32})/',
+			'strm' => '/https:\/\/yandex\.ru\/efir\?.*stream_id=([^&]+)/',
+			'music_playlist' => '/https:\/\/music\.yandex\.[a-z]+\/users\/(.+?)\/playlists\/(\d+)/',
+			'music_item' => '/https:\/\/music\.yandex\.[a-z]+\/.*(artist|track|album)\/(\d+)/',
+			'kinopoisk_id' => '/https?:\/\/www\.kinopoisk\.ru\/film\/(\d+)\//',
+			'yavideo' => '/(https?:\/\/ok\.ru\/video\/\d+|https?:\/\/vk\.com\/video-?[0-9_]+|https?:\/\/vkvideo\.ru\/video-?[0-9_]+)/',
+			'vk' => '/https:\/\/vk\.com\/.*(video-?[0-9_]+)/',
+			'bookmate' => '/https:\/\/books\.yandex\.ru\/audiobooks\/(\w+)/'
+		];
+	
+		foreach ($patterns as $type => $pattern) {
+			if (preg_match($pattern, $url, $matches)) {
+				$result = [
+					'type' => $type,
+					'id' => $matches[count($matches) - 1]
+				];
+	
+				// Для плейлистов дополнительно возвращаем user_id
+				if ($type === 'music_playlist') {
+					$result['user'] = $matches[1];
+					$result['playlist_id'] = $matches[2];
+				}
+	
+				// Для музыкальных треков дополнительно возвращаем тип
+				if ($type === 'music_item') {
+					$result['type_item'] = $matches[1];
+					$result['id'] = $matches[2];
+				}
+	
+				return $result;
+			}
+		}
+	
+		return false;
+	}
+
+	function play_video_by_descriptor($provider, $id)
+	{
+		return ['command' => 'serverAction',
+				'serverActionEventPayload' => [
+					'type' => 'server_action',
+					'name' => 'bass_action',
+					'payload' => [
+						'data' => [
+							'video_descriptor' => [
+								'provider_item_id' => $id,
+								'provider_name' => $provider
+							]
+						],
+						'name' => 'quasar.play_video_by_descriptor',
+					]
+				]
+			];
+	}
+	
+	function update_form(string $name, array $kwargs = []){
+		$response = [
+			"command" => "serverAction",
+			"serverActionEventPayload" => [
+				"type" => "server_action",
+				"name" => "update_form",
+				"payload" => [
+					"form_update" => [
+						"name" => $name,
+						"slots" => array_map(function($key, $value) {
+							return [
+								"type" => "string",
+								"name" => $key,
+								"value" => $value
+							];
+						}, array_keys($kwargs), array_values($kwargs))
+					],
+					"resubmit" => true
+				]
+			]
+		];
+		
+		return $response;
+	}
+
+/**
+ * Функция для исправления текста диалога
+ * 
+ * Известные проблемные слова: запа, таблетк, трусы
+ * 
+ * @param string $text Исходный текст для обработки
+ * @return string Текст с преобразованными словами в верхний регистр
+ */
+function fix_dialog_text(string $text): string 
+{
+    // Используем правильное регулярное выражение для кириллицы
+    return preg_replace_callback(
+        '/[а-яё]+/iu', // i - регистронезависимый поиск, u - поддержка юникода
+        function($matches) {
+            // Преобразуем найденное слово в верхний регистр
+            return mb_strtoupper($matches[0], 'UTF-8');
+        },
+        $text
+    );
+}
+
+function external_command(string $name, $payload = null): array {
+    $data = [1 => $name];
+    
+    if ($payload !== null) {
+        if (is_array($payload)) {
+            $payload = json_encode($payload);
+        }
+        $data[2] = $payload;
+    }
+    
+    require_once 'utils/protobuf.php';
+    $protobuf = new Protobuf();
+    
+    foreach ($data as $key => $value) {
+        if (is_string($value)) {
+            $protobuf->setString($key, $value);
+        } else {
+            $protobuf->setInt32($key, $value);
+        }
+    }
+    
+    $encoded_data = base64_encode($protobuf->serialize());
+    
+    return [
+        "command" => "externalCommandBypass",
+        "data" => $encoded_data
+    ];
+}
+
+function writeLog($message, $is_error = false){
+	$this->getConfig();
+	if ($is_error && $this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 1) {
+		$trace = debug_backtrace();
+		$caller = $trace[1];
+		registerError("YaDevice -> {$caller['function']}", $message);
+	} else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
+		DebMes($message, 'yadevices');
+	}
+}
+
+function parseUserName(){
+	$this->getConfig();
+	$cookies = $this->extractCookies(file_get_contents(YADEVICES_COOKIE_PATH));
+	foreach($cookies as $cookie){
+		if($cookie['name'] == 'yandex_login'){
+			$this->config['API_USERNAME'] = $cookie['value'];
+			break;
+		}
+	}
+	//Так как данная функция вызывается после успешной авторизации, запишем, что авторизация пройдена и перезапустим цикл
+	$this->config['AUTHORIZED'] = 1;
+	setGlobal('cycle_yadevicesControl', 'restart');
+	$this->saveConfig();
+}
+
+function extractCookies($string) {
+    $cookies = array();
+    
+    $lines = explode("\n", $string);
+
+    // iterate over lines
+    foreach ($lines as $line) {
+
+        // we only care for valid cookie def lines
+        if (isset($line[0]) && substr_count($line, "\t") == 6) {
+
+            // get tokens in an array
+            $tokens = explode("\t", $line);
+
+            // trim the tokens
+            $tokens = array_map('trim', $tokens);
+
+            $cookie = array();
+
+            // Extract the data
+            $cookie['domain'] = $tokens[0];
+            $cookie['flag'] = $tokens[1];
+            $cookie['path'] = $tokens[2];
+            $cookie['secure'] = $tokens[3];
+
+            // Convert date to a readable format
+            $cookie['expiration'] = date('Y-m-d h:i:s', $tokens[4]);
+
+            $cookie['name'] = $tokens[5];
+            $cookie['value'] = $tokens[6];
+
+            // Record the cookie.
+            $cookies[] = $cookie;
+        }
+    }
+    
+    return $cookies;
+}
+
+//////////////////////////////Авторизация и токены//////////////////////////////////////////
+
+    function getCSRFToken($cookie_file = YADEVICES_COOKIE_PATH) {
+		$result = $this->curl('https://passport.yandex.ru/am?app_platform=android', $cookie_file, '', '', [CURLOPT_HEADER=>true,CURLOPT_VERBOSE=>false,CURLOPT_FOLLOWLOCATION=>true]);
+		$data = json_decode($result, true);
+		if(isset($data['error'])){
+			$this->writeLog("Ошибка подключении для получения CSRF токена: " . $data['error']);
+			return false;
+		}
+        if (preg_match('/"csrf_token" value="(.+?)"/', $result, $m)) {
+            $token = $m[1];
+            return $token;
+        } else {
+            $this->writeLog("Failed to get CSRF token:\n" . $result);
+            return false;
+        }
+    }
+
+    function getToken($url = 'https://yandex.ru/quasar/iot')
+    {
+        //Получение токенов для отправки запросов в Яндекс
+		$result = $this->curl($url, YADEVICES_COOKIE_PATH, '', '', [CURLOPT_HEADER=>true,CURLOPT_VERBOSE=>false,CURLOPT_ENCODING=>'gzip',CURLOPT_FOLLOWLOCATION=>true,CURLOPT_IPRESOLVE=>CURL_IPRESOLVE_V4]);
+		$data = json_decode($result, true);
+		if(isset($data['error'])){
+			$this->writeLog("Ошибка подключении для получения csrfToken2 токена: " . $data['error']);
+			return false;
+		}
+        if (preg_match('/"csrfToken2":"(.+?)"/', $result, $m)) {
+            $token = $m[1];
+            $this->csrf_token = $token;
+            return $token;
+        } else {
+            $this->writeLog("Ошибка получения csrfToken2 токена:\n" . $result);
+            return false;
+        }
+    }
+
+    function getOAuthToken($force = false)
+    {
+        if ($force) $oauth_token = '';
+        else $oauth_token = $this->config['OAUTH_TOKEN'];
+
+        if ($oauth_token != '') return $oauth_token;
+        $post = array(
+            'client_secret' => 'ad0a908f0aa341a182a37ecd75bc319e',
+            'client_id' => 'c0ebe342af7d48fbbbfcf2d2eedb8f9e',
+        );
+        $postvars = '';
+        foreach($post as $key=>$value) {
+            $postvars .= $key . "=" . urlencode($value) . "&";
+        }
+
+        $cookie_data = LoadFile(YADEVICES_COOKIE_PATH);
+        $new_cookies = array();
+        $lines = explode("\n",$cookie_data);
+        foreach($lines as $line) {
+            if (!preg_match('/^(.*?)\.yandex\.ru/',$line)) continue;
+            $values = explode("\t",$line);
+            $cookie_title = $values[5];
+            $cookid_value = $values[6];
+            if ($cookie_title == 'yaexpflags') continue;
+            $new_cookies[]=$cookie_title.'='.$cookid_value;
+        }
+        $cookies_line = implode("; ",$new_cookies);
+        $headers = array(
+            'Ya-Client-Host: passport.yandex.ru',
+            'Ya-Client-Cookie: ' . $cookies_line
+        );
+		
+		$result = $this->curl('https://mobileproxy.passport.yandex.net/1/bundle/oauth/token_by_sessionid', YADEVICES_COOKIE_PATH, $headers, $postvars);
+        $data = json_decode($result, true);
+		if(isset($data['error'])){
+			$this->writeLog("Ошибка подключении для получения локального токена: " . $data['error']);
+			return false;
+		}
+        if (!$data['access_token']) {
+                $this->writeLog("Failed to get access token:\n" . $result);
+            return false;
+        }
+        // getAuth token
+        $post = array(
+            'client_secret' => '53bc75238f0c4d08a118e51fe9203300',
+            'client_id' => '23cabbbdc6cd418abb4b39c32c41195d',
+            'grant_type' => 'x-token',
+            'access_token' => $data['access_token'],
+        );
+        $postvars = '';
+        foreach($post as $key=>$value) {
+            $postvars .= $key . "=" . urlencode($value) . "&";
+        }
+		
+		$result = $this->curl('https://oauth.mobile.yandex.net/1/token', YADEVICES_COOKIE_PATH, '', $postvars);
+        $data = json_decode($result,true);
+		if(isset($data['error'])){
+			$this->writeLog("Ошибка при подключении для получения x-token токена: " . $data['error']);
+			return false;
+		}
+        if (!$data['access_token']) {
+            $this->writeLog("Failed to get x-token token:\n" . $result);
+            return false;
+        }
+        $oauth_token = $data['access_token'];
+        $this->config['OAUTH_TOKEN'] = $oauth_token;
+        $this->saveConfig();
+        return $oauth_token;
+    }
+	
+	function getDeviceTokenByHand($id)
+    {
+        $req = SQLSelectOne("SELECT STATION_ID, PLATFORM FROM yastations WHERE ID='" . dbSafe($id) . "'");
+        $this->getDeviceToken($req['STATION_ID'], $req['PLATFORM']);
+        $this->redirect("?id=" . $id . "&view_mode=edit_yastations");
+    }
+
+    function getDeviceToken($device_id, $platform, $force = false)
+    {
+        $oauth_token = $this->getOAuthToken();
+		//print $oauth_token.PHP_EOL;
+        if (!$oauth_token) return false;
+        $url = "https://quasar.yandex.net/glagol/token?device_id=" . $device_id . "&platform=" . $platform;
+
+		$header = array('Content-type: application/json',
+						'Authorization: Oauth ' . $oauth_token);
+		
+		$result = $this->curl($url, YADEVICES_COOKIE_PATH, $header);
+		if(!$result){
+			$this->writeLog("Ошибка подключения при получении локального токена.");
+            return false;
+		} else if (is_array($result)){
+			$this->writeLog("Неожиданный ответ при получении локального токена: ".$result);
+            return false;
+		}
+
+        $data = json_decode($result, true);
+		if(isset($data['error'])){
+			$this->writeLog("Ошибка подключении для получения локального токена: " . $data['error']);
+			return false;
+		}
+        if ($data['status'] == 'ok' && isset($data['token'])) {
+            //Запишем токен
+            SQLExec("UPDATE yastations SET DEVICE_TOKEN = '" . dbSafe($data['token']) . "' WHERE STATION_ID = '" . dbSafe($device_id) . "'");
+            return $data['token'];
+        } else {
+            $this->writeLog("Failed to get device local token:\n" . $result);
+            return false;
+        }
+    }
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////
+
 // --------------------------------------------------------------------
 }
 /*
