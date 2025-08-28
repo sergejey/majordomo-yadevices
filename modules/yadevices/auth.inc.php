@@ -169,5 +169,8 @@ if (!$type) {
     $data = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/devices');
     if (is_array($data)) {
         $out['AUTHORIZED_OK'] = 1;
+		$this->loadConfig;
+		if($this->config['AUTHORIZED'] == 0) $this->config['AUTHORIZED'] = 1;
+		$this->saveConfig;
     }
 }
