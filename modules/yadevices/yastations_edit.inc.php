@@ -30,7 +30,7 @@ if ($this->mode == 'send_text') {
 		} else if($out['SENDAS'] == 2) {
 			$command = 'dialog';
 		}
-		$result = $this->sendCommandToStation($rec, $command, gr('text'),);
+		$result = $this->sendCommandToStation($rec, $command, gr('text'));
     }
 	
     $this->redirect("?view_mode=".$this->view_mode."&id=".$rec['ID']);

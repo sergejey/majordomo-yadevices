@@ -474,8 +474,8 @@ class yadevices extends module
 					$rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 					$rec['OWNER'] = $this->config['API_USERNAME'];
 					$rec['TITLE'] = $device['name'];
-					$rec['ICON_URL'] = $device['icon_url'];
 					$rec['PLATFORM'] = $device['quasar_info']['platform'];
+					$rec['ICON_URL'] = $this->type2url($device['type']);
 					$rec['STATION_ID'] = $device['quasar_info']['device_id'];
 					$rec['IS_ONLINE'] = $device['state'] == 'online' ? 1 : 0;
 					$rec['UPDATED'] = date('Y-m-d H:i:s');
@@ -1111,7 +1111,7 @@ class yadevices extends module
         $this->getConfig();
 
         if ($event == 'SAY' || $event == 'ASK') {
-            //$this->writeLog("$event: " . json_encode($details, JSON_UNESCAPED_UNICODE));
+            $this->writeLog("$event: " . json_encode($details, JSON_UNESCAPED_UNICODE));
         }
 
         if ($event == 'ASK') {
@@ -1141,12 +1141,11 @@ class yadevices extends module
                 $min_level = 0;
                 if ($station['MIN_LEVEL_TEXT'] != '') {
                     $min_level = processTitle($station['MIN_LEVEL_TEXT']);
-                } elseif ($station['MIN_LEVEL']) {
-                    $min_level = $station['MIN_LEVEL'];
                 }
                 if ($level >= $min_level) {
                     //$this->sendCloudTTS($station['IOT_ID'],$message);
-                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
+					$this->sendCommandToStation($station, 'text', $message);
+                    //callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
                 }
             }
         }
@@ -1795,6 +1794,19 @@ function extractCookies($string) {
     
     return $cookies;
 }
+
+function type2url($type){
+	include "utils/devices_url.php";
+	$type_arr = explode('.', $type);
+	$station = end($type_arr);
+	foreach($devices_URL as $key=>$url){
+		if(strpos($key, $station . '_on') !== false){
+			return $url;
+		}
+	}
+	return $devices_URL['devices.types.image_icon'];
+}
+
 
 //////////////////////////////Авторизация и токены//////////////////////////////////////////
 
