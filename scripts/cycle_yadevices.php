@@ -40,6 +40,7 @@ if(!empty($yadevices->config['AUTHORIZED'])){
 	$quasar['IP'] = 'Quasar';
 	$quasar['DEVICE_TOKEN'] = 'Quasar';
 	$quasar['IS_CONNECT'] = time();
+	$quasar['ANSWER'] = '';
 	$stations[] = $quasar;
 } else {
 	echo date("H:i:s") . " Авторизация отсутствует! Подключение к облаку не производится." . PHP_EOL;
@@ -63,7 +64,7 @@ while(true) {
 	$ar_ex = [];
 	foreach($stations as $key => $station){
 		if($station['IS_CONNECT'] == 0){
-			//Если соединение не ресурс или последнее сообщение было больше 1.5 минуты назад, соединение потеряно
+			//Если соединение не ресурс или последнее сообщение было больше 1.5 минут назад, соединение потеряно
 			if(is_resource($station['CONNECT']->getSocket()) and $station['LAST_MESSAGE'] > time()-90){
 				$ar_read[] = $station['CONNECT']->getSocket();
 			} else {
@@ -113,7 +114,14 @@ while(true) {
 								$yadevices->receiveQuasar($response);
 						} else {
 							if($station['CONNECT']->getLastOpcode() == 'ping'){
-								$station['CONNECT']->send($response, 'pong');
+								try{
+									$station['CONNECT']->send($response, 'pong');
+								} catch(Exception $e){
+									$stations[$key]['IS_CONNECT'] = time();
+									unset($stations[$key]['CONNECT']);
+									echo date('H:i:s') . ' Соединение с '. $station['TITLE'] . ' прервано.' . PHP_EOL;
+									continue;
+								}
 							} else {
 								$response_arr = json_decode($response, true);
 								//if($station['TITLE'] == "Яндекс Станция") print_r($response_arr);
@@ -208,8 +216,7 @@ while(true) {
 					$value = '';
 				}
 				$id = uniqid('');
-				$answer = [$id=>['command'=>$command,'value'=>$value]];
-				$stations[$station_id]['ANSWER'] = $answer;
+				$stations[$station_id]['ANSWER'] = [$id=>['command'=>$command,'value'=>$value]];
 				if($command == 'playerState') $sendPlayerState = true;
 				$message = $yadevices->message($command, $value, $stations[$station_id]['DEVICE_TOKEN'], $id);
 				if($value != '') $value = ': '.$value;
@@ -293,7 +300,7 @@ function connect($stations){
 							$stations[$key]['DEVICE_TOKEN'] = $token;
 							updateData($station, 1, 'online');
 							$stations[$key]['ONLINE'] = 1;
-							$connect->send($yadevices->message('softwareVersion', '', $station['DEVICE_TOKEN']));
+							$connect->send($yadevices->message('softwareVersion', '', $token));
 						}
 					}
 					$stations[$key]['CONNECT'] = $connect;
@@ -304,6 +311,13 @@ function connect($stations){
 					} else {
 						echo date('H:i:s') . ' Cоединение с '. $station['TITLE'] . ' успешно!'. PHP_EOL;
 						unset($stations[$key]['CONNECTION_OFF']);
+					}
+					//Если есть неотправленное сообщение, например, при устаревании токена (Invalid token)
+					if(is_array($station['ANSWER'])){
+						foreach($station['ANSWER'] as $id=>$answer){
+							$connect->send($yadevices->message($answer['command'], $answer['value'], $token, $id));
+							echo date("H:i:s")." Повторно отправляем на ".$station['TITLE']. " " . $answer['command'] .": ". $answer['value'].PHP_EOL;
+						}
 					}
 				} else {
 					$stations[$key]['IS_CONNECT'] = time()+RECONNECT_TIME;
