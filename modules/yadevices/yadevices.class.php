@@ -1241,7 +1241,10 @@ class yadevices extends module
 							$value = trim(stristr($value, ':'), ' \n\r\t\v\x00\:');
 						} else if($command == 'volume'){
 							if($value == 'volumeUp' or $value == 'volumeDown') $command = $value;
-							else $command == 'setVolume';
+							else{
+								$command = 'setVolume';
+								$value *= 0.1;
+							}
 						}
 						addToOperationsQueue('yadevices', $properties[$i]['IOT_ID'], $command . '^' . $value);
 				} else if(stripos($properties[$i]['TITLE'], 'cloud') !== false){
@@ -1430,7 +1433,7 @@ EOD;
 			$this->writeLog('Ошибка авторизации! Облачные функции недоступны!', true);
 			$this->getConfig();
 			$this->config['AUTHORIZED'] = 0;
-			$this->saveConfig;
+			$this->saveConfig();
 			return 'Unauthorized';
 		}
         $request_headers = isset($info['request_header']) ? $info['request_header'] : '';
