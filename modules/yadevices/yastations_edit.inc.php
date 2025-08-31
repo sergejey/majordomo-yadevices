@@ -56,10 +56,13 @@ if ($this->mode == 'update') {
             $rec['ID'] = SQLInsert($table_name, $rec); // adding new record
         }
 
-        if ($rec['TTS']==1) {
+        /*if ($rec['TTS']==1) {
             $token = $this->getDeviceToken($rec['STATION_ID'], $rec['PLATFORM'], true);
-        }
+        }*/
 
+		if(!empty($rec['IP'])){
+			setGlobal('cycle_yadevicesControl', 'restart');
+		}
         $out['OK'] = 1;
     } else {
         $out['ERR'] = 1;
