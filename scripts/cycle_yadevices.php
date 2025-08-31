@@ -55,7 +55,7 @@ foreach($stations_temp as $station){
 	$stations[$station['IOT_ID']]['ANSWER'] = '';
 }
 unset($stations_temp);
-$reloadTime = $yadevices->config['RELOAD_TIME'];
+$reloadTime = $yadevices->config['RELOAD_TIME'] ?? 10;
 
 while(true) {
 	$stations = connect($stations);

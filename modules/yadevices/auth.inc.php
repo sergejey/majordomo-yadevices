@@ -170,7 +170,7 @@ if (!$type) {
     if (is_array($data)) {
         $out['AUTHORIZED_OK'] = 1;
 		$this->getConfig();
-		if(empty($this->config['AUTHORIZED'])) $this->config['AUTHORIZED'] = 1;
+		if(empty($this->config['AUTHORIZED'])) $this->parseUserName();
 		$this->saveConfig();
     }
 }
