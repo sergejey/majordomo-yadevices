@@ -785,8 +785,6 @@ class yadevices extends module
     {
         $station_rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . $iot_id . "'");
 
-        $phrase = str_replace(array('(', ')'), ' ', $phrase);
-        $phrase = preg_replace('/<.+?>/u', '', $phrase);
         $phrase = preg_replace('/\s+/u', ' ', $phrase);
 
         if (mb_strlen($phrase, 'UTF-8') >= 100) {
@@ -1017,34 +1015,6 @@ class yadevices extends module
         SQLExec("DELETE FROM yadevices WHERE ID=" . (int)$id);
     }
 
-    function sendGlagol($command, $data, $token, $ip)
-    {
-        $this->writeLog("Отправляем команду '$data' на устройство $ip");
-
-        $clientConfig = new ClientConfig();
-        $clientConfig->setHeaders([
-            'X-Origin' => 'http://yandex.ru/',
-        ]);
-        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-        $msg = array(
-            'conversationToken' => $token,
-            'id' => uniqid(''),
-            'sentTime' => time() * 1000,
-        );
-        $client = new WebSocketClient('wss://' . $ip . ':' . GLAGOL_PORT . '/', $clientConfig);
-        $client->send($this->message($command, $data, $token));
-        $result = $client->receive();
-
-        $result_data = json_decode($result, true);
-
-        if (is_array($result_data)) {
-            $client->close();
-            return $result_data;
-        }
-        return false;
-
-    }
-
     function getStatus($token, $ip)
     {
         $clientConfig = new ClientConfig();
@@ -1082,28 +1052,53 @@ class yadevices extends module
 
     function sendCommandToStation($station, $command, $data = '')
     {
-        if (!$command) return false;
-
-        if (!$station['ID'] || !$station['IP']) return false;
-
-        /*$token = $this->getDeviceToken($station['STATION_ID'], $station['PLATFORM']);
-
-        if (!$token) return false;
-        $station['DEVICE_TOKEN'] = $token;
-        SQLUpdate('yastations', $station);
-*/
-
-        if (isset($station['DEVICE_TOKEN']) and !empty($command)) {
-			if($data != '') $data = '^' . $data;
-			addToOperationsQueue('yadevices', $station['IOT_ID'], $command . $data);
-			return true;
-			$result = $this->sendGlagol($command, $data, $station['DEVICE_TOKEN'], $station['IP']);
-            if (is_array($result)) {
-                return true;
-            }
+        if (empty($command)) return false;
+		if(!is_array($station)){
+			$station = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID=" . (int)$station);
+		}
+        if (empty($station['ID']) || empty($station['IP'])) return false;
+        if (isset($station['DEVICE_TOKEN'])) {
+			$updatedCycle = gg('cycle_yadevicesRun');
+			if ((time() - (int)$updatedCycle < 16)) {
+				if($data != '') $data = '^' . $data;
+				addToOperationsQueue('yadevices', $station['IOT_ID'], $command . $data);
+				return true;
+			} else {
+				$result = $this->sendGlagol($command, $data, $station['DEVICE_TOKEN'], $station['IP']);
+				if (is_array($result)) {
+					return true;
+				}
+			}
         } else {
             $this->writeLog('sendCommandToStation() -> Перед тем, как отправлять команды на станцию - сформируйте токен доступа!', true);
         }
+    }
+	
+	function sendGlagol($command, $data, $token, $ip)
+    {
+        $this->writeLog("Отправляем команду '$data' на устройство $ip");
+
+        $clientConfig = new ClientConfig();
+        $clientConfig->setHeaders([
+            'X-Origin' => 'http://yandex.ru/',
+        ]);
+        $clientConfig->setContextOptions(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $msg = array(
+            'conversationToken' => $token,
+            'id' => uniqid(''),
+            'sentTime' => time() * 1000,
+        );
+        $client = new WebSocketClient('wss://' . $ip . ':' . GLAGOL_PORT . '/', $clientConfig);
+        $client->send($this->message($command, $data, $token));
+        $result = $client->receive();
+
+        $result_data = json_decode($result, true);
+
+        if (is_array($result_data)) {
+            $client->close();
+            return $result_data;
+        }
+        return false;
     }
 
     function processSubscription($event, $details = '')
@@ -1144,8 +1139,8 @@ class yadevices extends module
                 }
                 if ($level >= $min_level) {
                     //$this->sendCloudTTS($station['IOT_ID'],$message);
-					$this->sendCommandToStation($station, 'text', $message);
-                    //callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
+					//$this->sendCommandToStation($station, 'text', $message);
+                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
                 }
             }
         }
@@ -1246,7 +1241,8 @@ class yadevices extends module
 								$value *= 0.1;
 							}
 						}
-						addToOperationsQueue('yadevices', $properties[$i]['IOT_ID'], $command . '^' . $value);
+						$this->sendCommandToStation($properties[$i]['IOT_ID'], $command, $value);
+						//addToOperationsQueue('yadevices', $properties[$i]['IOT_ID'], $command . '^' . $value);
 				} else if(stripos($properties[$i]['TITLE'], 'cloud') !== false){
 					    // Отправляем в облако
 						$command = str_replace('cloud.', '', $properties[$i]['TITLE']);
@@ -1870,7 +1866,7 @@ function type2url($type){
             if (!preg_match('/^(.*?)\.yandex\.ru/',$line)) continue;
             $values = explode("\t",$line);
             $cookie_title = $values[5];
-            $cookid_value = $values[6];
+            $cookid_value = trim($values[6]);
             if ($cookie_title == 'yaexpflags') continue;
             $new_cookies[]=$cookie_title.'='.$cookid_value;
         }
@@ -1883,7 +1879,7 @@ function type2url($type){
 		$result = $this->curl('https://mobileproxy.passport.yandex.net/1/bundle/oauth/token_by_sessionid', YADEVICES_COOKIE_PATH, $headers, $postvars);
         $data = json_decode($result, true);
 		if(isset($data['error'])){
-			$this->writeLog("Ошибка подключении для получения локального токена: " . $data['error']);
+			$this->writeLog("Ошибка подключении для получения токена доступа: " . $data['error']);
 			return false;
 		}
         if (!$data['access_token']) {
