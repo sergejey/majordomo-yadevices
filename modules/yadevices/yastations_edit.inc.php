@@ -21,7 +21,7 @@ if ($this->mode == 'send_text') {
 		} else {
 			$command = 'phrase_action';
 		}
-		$result = $this->sendCommandToStationCloud($rec['ID'], gr('text'), $command);
+		$result = $this->sendCommandToStationCloud($rec, $command, gr('text'));
     } else {
 		if($out['SENDAS'] == 0) {
 			$command = 'text';
