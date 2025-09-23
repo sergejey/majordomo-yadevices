@@ -169,40 +169,31 @@ class yadevices extends module
             if(!isset($params['command'])) $params['command'] = '';
             $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$params['station']);
 			
-			if(isset($params['data']) and isset($params['volume'])){
-				$params['data'] = $params['data'].'^'.$params['volume'];
-			}
+			//Облачная отправка
             if ($station['TTS'] == 2 && $station['IOT_ID'] != '' || isset($params['cloud'])) {
 				if(empty($this->config['AUTHORIZED'])) return;
-				if($params['command'] == 'text'){
-					$params['command'] = 'phrase_action';
-				} else if($params['command'] == 'command' or $params['command'] == 'dialog'){
-					$params['command'] = 'text_action';
-				} else if ($params['command'] == 'setVolume' and isset($params['volume'])) {
+				if($params['command'] == 'setVolume') {
+					$params['data'] = $params['volume'] ?? $params['data'];
 					//У ТВСтанций от 1 до 100
-					if($station['PLATFORM'] == "magritte" or $station['PLATFORM'] == "monet") $params['volume'] *= 10;
-					$params['command'] = 'text_action';
-					$params['data'] = 'громкость на ' . $params['volume'];
-				} else if($params['command'] == 'volumeUp'){
-					$params['command'] = 'text_action';
-					$params['data'] = 'громче';
-				} else if($params['command'] == 'volumeDown'){
-					$params['command'] = 'text_action';
-					$params['data'] = 'тише';
+					if($station['PLATFORM'] == "magritte" or $station['PLATFORM'] == "monet") $params['data'] *= 10;
 				}
-				if (isset($params['say'])) { //для обратной совместимости
+				else if (isset($params['say'])) { //для обратной совместимости
 					$params['data'] = $params['say'];
 					$params['command'] = 'phrase_action';
-				} else if(!isset($params['data']) and !isset($params['volume'])){ //для обратной совместимости
-					$params['data'] = $params['command'];
-					$params['command'] = 'phrase_action';
-                }
-				return $this->sendCloudTTS($station['IOT_ID'], $params['data'], $params['command']);
+				}
+				if(!isset($params['data'])) $params['data'] = '';
+				$this->sendCommandToStationCloud($station, $params['command'], $params['data']);
+			//Локальная отправка
             } else {
+				if(isset($params['data']) and isset($params['volume'])){
+					$params['data'] = $params['data'].'^'.$params['volume'];
+				}
                 if ($params['command'] == 'setVolume') {
 					if(isset($params['volume'])){
 						(float)$params['data'] = is_float($params['volume']) ? $params['volume'] : $params['volume'] * 0.1;
-					} else (float)$params['data'] = $params['data'] * 0.1;
+					} else {
+						(float)$params['data'] = $params['data'] * 0.1;
+					}
 				} else if($params['command'] == 'volumeUp' or $params['command'] == 'volumeDown'){
 					$params['data'] = $params['command'];
 				} else if (isset($params['say'])) { //для обратной совместимости
@@ -213,7 +204,7 @@ class yadevices extends module
                 } else if ($params['data'] == 'volumeUp' or $params['data'] == 'volumeDown') {
 					$params['command'] = $params['data'];
                 }
-                return $this->sendCommandToStation($station, $params['command'], $params['data']);
+                $this->sendCommandToStation($station, $params['command'], $params['data']);
             }
         }
     }
@@ -234,7 +225,6 @@ class yadevices extends module
 		if(!isset($this->config['ERRORMONITOR'])){
 			$this->config['ERRORMONITOR'] = 0;
 			$this->config['ERRORMONITORTYPE'] = 2;
-			$this->saveConfig();
 		}
 
         if ($this->view_mode == 'update_settings') {
@@ -295,11 +285,9 @@ class yadevices extends module
         }
 
         if ($this->view_mode == 'update_settings_cycle') {
-            global $cycleIsOn;
-            global $cycleIsOnTime;
-            global $reloadAfterOpen;
-            global $errorMonitor;
-            global $errorMonitorType;
+            $cycleIsOnTime = gr('cycleIsOnTime');
+            $errorMonitor = gr('errorMonitor');
+            $errorMonitorType = gr('errorMonitorType');
 
             if ($errorMonitor == 'on') {
                 $this->config['ERRORMONITOR'] = 1;
@@ -331,8 +319,6 @@ class yadevices extends module
         }
 
         $out['RELOAD_TIME'] = $this->config['RELOAD_TIME'];
-        $out['RELOADAFTEROPEN'] = $this->config['RELOADAFTEROPEN'];
-        $out['STATUS_CYCLE'] = $this->config['STATUS_CYCLE'];
         $out['ERRORMONITOR'] = $this->config['ERRORMONITOR'];
         $out['ERRORMONITORTYPE'] = $this->config['ERRORMONITORTYPE'];
     }
@@ -427,8 +413,8 @@ class yadevices extends module
 						}
 					}
 					//Значения датчиков
-					if (isset($data["properties"]) && is_array($data["properties"])) {
-						foreach ($data["properties"] as $propertie) {
+					if (isset($device["properties"]) && is_array($device["properties"])) {
+						foreach ($device["properties"] as $propertie) {
 							$p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
 							//Получаем по каждом свойству по отдельности
 							$req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . $rec_device['YADEVICE_ID'] . "'");
@@ -484,6 +470,9 @@ class yadevices extends module
 					$rec['ICON_URL'] = $this->type2url($device['type']);
 					$rec['STATION_ID'] = $device['quasar_info']['device_id'];
 					$rec['IS_ONLINE'] = $device['state'] == 'online' ? 1 : 0;
+					foreach($device['capabilities'] as $cap){
+						if(isset($cap['state']['instance']) and $cap['state']['instance'] == 'volume') $rec['VOLUME'] = $cap['state']['value']['value'];
+					}
 					$rec['UPDATED'] = date('Y-m-d H:i:s');
 					if(empty($rec['ID'])) {
 						$rec['IOT_ID'] = $device['id'];
@@ -790,13 +779,14 @@ class yadevices extends module
     function sendCloudTTS($iot_id, $phrase, $action = 'phrase_action')
     {
         $station_rec = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . $iot_id . "'");
-
+		$phrase = preg_replace('/\^.*/u', '', $phrase);
         $phrase = preg_replace('/\s+/u', ' ', $phrase);
+		$phrase = trim($phrase);
 
         if (mb_strlen($phrase, 'UTF-8') >= 100) {
             $phrase = mb_substr($phrase, 0, 99, 'UTF-8');
         }
-        $this->writeLog("Sending cloud '$action: $phrase' to " . $station_rec['TITLE']);
+        $this->writeLog("Отправка в облако '$action: $phrase' на " . $station_rec['TITLE']);
 
 
         //$action = 'phrase';
@@ -887,10 +877,10 @@ class yadevices extends module
 
 	 //Запись в привязанное свойство/метод
 	function setProperty($device, $value, $params = [], $type = ''){
-		if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_PROPERTY'])) {
+		if (!empty($device['LINKED_OBJECT']) && !empty($device['LINKED_PROPERTY'])) {
 			setGlobal($device['LINKED_OBJECT'] . '.' . $device['LINKED_PROPERTY'], $value, array($this->name=>1), $this->name . '.' . $type);
 		}
-		if (isset($device['LINKED_OBJECT']) && isset($device['LINKED_METHOD'])) {
+		if (!empty($device['LINKED_OBJECT']) && !empty($device['LINKED_METHOD'])) {
 			$params['VALUE'] = $value;
 			callMethodSafe($device['LINKED_OBJECT'] . '.' . $device['LINKED_METHOD'], $params);
 		}
@@ -1049,11 +1039,47 @@ class yadevices extends module
     }
 
 
-    function sendCommandToStationCloud($id, $command, $data = 0)
+    function sendCommandToStationCloud($station, $command, $data = '')
     {
         if (!$command) return false;
-        $station = SQLSelectOne("SELECT * FROM yastations WHERE ID=" . (int)$id);
-        $this->sendCloudTTS($station['IOT_ID'], $command, $data);
+		switch($command){
+			case 'text':
+				$command = 'phrase_action';
+				break;
+			case 'command':
+			case 'dialog':
+				$command = 'text_action';
+				break;
+			case 'setVolume':
+				$command = 'text_action';
+				$data = 'громкость на ' . $data;
+				break;
+			case 'volumeUp':
+				$command = 'text_action';
+				$data = 'громче';
+				break;
+			case 'volumeDown':
+				$command = 'text_action';
+				$data = 'тише';
+				break;
+			case 'play':
+				$command = 'text_action';
+				$data = 'продолжи воспроизведение';
+				break;
+			case 'stop':
+				$command = 'text_action';
+				$data = 'стоп';
+				break;
+			case 'next':
+				$command = 'text_action';
+				$data = 'следующий трек';
+				break;
+			case 'prev':
+				$command = 'text_action';
+				$data = 'предыдущий трек';
+				break;
+		}
+        $this->sendCloudTTS($station['IOT_ID'], $data, $command);
     }
 
     function sendCommandToStation($station, $command, $data = '')
@@ -1438,7 +1464,7 @@ EOD;
 			$this->saveConfig();
 			return 'Unauthorized';
 		}
-        $request_headers = isset($info['request_header']) ? $info['request_header'] : '';
+        $request_headers = $info['request_header'] ?? '';
         if ($debug) {
             dprint("REQUEST HEADERS:",false);
             dprint($request_headers,false);

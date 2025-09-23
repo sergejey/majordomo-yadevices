@@ -45,7 +45,7 @@
 				[#endif#]
 			</div>
 		</div>
-		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron'#]
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron' OR PLATFORM == 'pickle'#]
 		<div class="form-group [#if ERR_IP#]has-error[#endif#]">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">IP</label>
 			<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
@@ -59,7 +59,7 @@
 				<label class="radio-inline">
 					<input type="radio" name="tts" value="0"[#if TTS="0"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_NO#>
 				</label>
-				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron'#]
+				[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron' OR PLATFORM == 'pickle'#]
 					[#if DEVICE_TOKEN!="" AND IP != ""#]
 					<label class="radio-inline">
 						<input type="radio" name="tts" value="1"[#if TTS="1"#] checked[#endif#] onclick="$('#cloudTTSHelpHint').hide();"> <#LANG_YES#> (локально)
@@ -105,7 +105,7 @@
 		</div>
 	</div>
 
-		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron'#]
+		[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron' OR PLATFORM == 'pickle'#]
 		
 		<div class="form-group">
 			<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Плеер для сцены:</label>
@@ -169,7 +169,7 @@
 			<div class="form-group">
 				<label for="" class="col-lg-2 col-md-2 col-sm-12 col-xs-12" style="text-align: left;padding: 5px 10px 0px 15px;">Способ отправки:</label>
 				<div class="col-lg-10 col-md-10 col-sm-12 col-xs-12">
-					[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron'#]
+					[#if PLATFORM == 'yandexmini' OR PLATFORM == 'yandexmicro' OR PLATFORM == 'yandexstation' OR PLATFORM == 'yandexstation_2' OR PLATFORM == 'yandexmini_2' OR PLATFORM == 'jbl_link_portable' OR PLATFORM == 'yandexmidi' OR PLATFORM == 'cucumber' OR PLATFORM == 'plum' OR PLATFORM == 'bergamot' OR PLATFORM == 'chiron' OR PLATFORM == 'pickle'#]
 						[#if DEVICE_TOKEN!="" AND IP != ""#]
 						<label class="radio-inline">
 							<input type="radio" onchange="if($(this).prop('checked')) {$('#sendAsOnlyLocal').show();$('#cloudTTSHelpHintdemo').hide();$('#localDialog').show();}" name="cloud" value="0" [#if TTS=="0" || TTS=="1"#] checked[#endif#]> Локально
@@ -246,10 +246,10 @@
 		Можно говорить шёпотом:
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#], 'command'=>'text', 'data'=>'&lt;speaker is_whisper="true"&gt;Ты чего шумишь? Спят все!'));</pre>
 		
-		Можно проговорить сообщение с определённым уровнем громкости, после сообщения громкость вернётся на текущий уровень:
+		Можно проговорить сообщение с определённым уровнем громкости, после сообщения громкость вернётся на текущий уровень (<b>только локальный режим через цикл</b>):
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#], 'command'=>'text', 'data'=>'Это сообщение я говорю с уровнем громкости семь', 'volume'=>7));</pre>
 		
-		Или так (иожно использовать при отправке из привязанных свойств):
+		Или так (иожно использовать при отправке из привязанных свойств)(<b>только локальный режим через цикл</b>):
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#], 'command'=>'text', 'data'=>'Это сообщение я говорю с уровнем громкости восемь^8'));</pre>
 
 		Выполнение команды:
@@ -267,10 +267,10 @@
 		Управление воспроизведением (play, stop, prev, next):
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'play'));</pre>
 		
-		Можно отправлять ссылки на песни и альбомы в Яндекс.Музыке, а также ссылки на аудиопотоки, mp3 и ogg файлы:
+		Можно отправлять ссылки на песни и альбомы в Яндекс.Музыке, а также ссылки на аудиопотоки, mp3 и ogg файлы (<b>только локальный режим</b>):
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'audio', 'data'=>'https://music.yandex.ru/album/46628/track/450105'));</pre>
 		
-		На Станции с HDMI и экраном можно отправлять ссылки на Youtube:
+		На Станции с HDMI и экраном можно отправлять ссылки на Youtube (<b>только локальный режим</b>):
 		<pre style="color: #c7254e;background-color: #f9f2f4;border: 0px;">callAPI('/api/module/yadevices','GET',array('station'=>[#ID#],'command'=>'video', 'data'=>'https://youtu.be/00QoDkBsVjs'));</pre>
 	</div>
 </div>
