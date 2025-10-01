@@ -417,7 +417,7 @@ class yadevices extends module
 						foreach ($device["properties"] as $propertie) {
 							$p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
 							//Получаем по каждом свойству по отдельности
-							$req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . $rec_device['YADEVICE_ID'] . "'");
+							$req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . $rec_device['ID'] . "'");
 							//Основные датчики
 							$value = $propertie['state']['value'] ?? '';
 							if ($value != $req_prop['VALUE']) {
@@ -851,7 +851,7 @@ class yadevices extends module
             $items = $data['items'];
             foreach ($items as $item) {
 				//Исключаем приложения на телефоне и ТВ
-				if($item['platform'] == 'alice_app_ios' or $item['platform'] == 'iot_app_android' or $item['platform'] == 'yandex_tv_mt6681_cv') continue;
+				if($item['platform'] == 'alice_app_ios' or $item['platform'] == 'iot_app_ios' or $item['platform'] == 'iot_app_android' or $item['platform'] == 'yandex_tv_mt6681_cv') continue;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . $item['id'] . "'");
                 $rec['UPDATED'] = date('Y-m-d H:i:s');
                 /*$rec['OWNER'] = $this->config['API_USERNAME'];
