@@ -1457,9 +1457,23 @@ EOD;
         $result = curl_exec($YaCurl);
         $info = curl_getinfo($YaCurl);
         curl_close($YaCurl);
-		if($result == 'Unauthorized'){
-			$this->writeLog('Ошибка авторизации! Облачные функции недоступны!', true);
+		if($info['http_code'] == 401){
 			$this->getConfig();
+			if($this->config['AUTHORIZED'] == 1){
+				if(file_exists(YADEVICES_COOKIE_PATH.'_back')){
+					copy(YADEVICES_COOKIE_PATH.'_back', YADEVICES_COOKIE_PATH);
+					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
+					if ($checkCookie['status'] != 'ok') {
+						@unlink(YADEVICES_COOKIE_PATH);
+						@unlink(YADEVICES_COOKIE_PATH.'_back');
+						$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
+					} else {
+						$this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
+						return $this->apiRequest($url, $method, $params, $repeating);
+					}
+				}
+				say("В модуле Yadevices отсутствует авторизация", 2);
+			}
 			$this->config['AUTHORIZED'] = 0;
 			$this->saveConfig();
 			return 'Unauthorized';
@@ -1974,15 +1988,15 @@ function type2url($type){
 
         $data = json_decode($result, true);
 		if(isset($data['error'])){
-			$this->writeLog("Ошибка подключении для получения локального токена: " . $data['error']);
+			$this->writeLog("Ошибка подключения для получения локального токена: " . $data['error']);
 			return false;
 		}
-        if ($data['status'] == 'ok' && isset($data['token'])) {
+        if (isset($data['status']) && $data['status'] == 'ok' && isset($data['token'])) {
             //Запишем токен
             SQLExec("UPDATE yastations SET DEVICE_TOKEN = '" . dbSafe($data['token']) . "' WHERE STATION_ID = '" . dbSafe($device_id) . "'");
             return $data['token'];
         } else {
-            $this->writeLog("Failed to get device local token:\n" . $result);
+            $this->writeLog("Ошибка получения локального токена:\n" . $result);
             return false;
         }
     }

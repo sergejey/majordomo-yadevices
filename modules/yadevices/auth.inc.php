@@ -48,6 +48,7 @@ if ($type == 'otp') {
                     $out['ERR_MSG'] = 'Ошибка авторизации!';
                     return;
                 } else {
+					copy(YADEVICES_COOKIE_PATH, YADEVICES_COOKIE_PATH.'_back');
 					$this->parseUserName();
                     $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
                 }
@@ -111,6 +112,7 @@ if ($type == 'qr') {
                 $out['ERR_MSG'] = 'Ошибка авторизации!';
                 return;
             } else {
+				copy(YADEVICES_COOKIE_PATH, YADEVICES_COOKIE_PATH.'_back');
 				$this->parseUserName();
                 $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
             }
@@ -159,6 +161,7 @@ if ($type == 'cookie') {
             $out['ERR_MSG'] = 'Файл который вы загружаете не является Cookie файлом с сайта Яндекс или он устарел.';
             return;
         } else {
+			copy(YADEVICES_COOKIE_PATH, YADEVICES_COOKIE_PATH.'_back');
 			$this->parseUserName();
             $this->redirect("?view_mode=" . $this->view_mode . "&refresh_devices=1&ok_msg=" . urlencode("Успешная авторизация!"));
         }

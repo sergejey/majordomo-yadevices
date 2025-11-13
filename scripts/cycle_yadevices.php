@@ -338,6 +338,7 @@ function connect($stations){
 
 function updateData($station, $value, $prop){
 	global $yadevices;
+	//if(strlen($value) > 255) $yadevices->writeLog($value);
 	if($prop != 'online'){
 		SQLExec("UPDATE yastations SET ".$prop." = '" . dbSafe($value) . "' WHERE STATION_ID = '" . $station['STATION_ID'] . "'");
 		$params['OLD_VALUE'] = $station[$prop];
