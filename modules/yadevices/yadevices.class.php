@@ -486,12 +486,31 @@ class yadevices extends module
 						$device_rec['TITLE'] = $device['name'];
 						$device_rec['DEVICE_TYPE'] = str_replace('smart_speaker.yandex.', '', $device['type']);
 						$device_rec['HOUSE'] = $house['name'];
-						$device_rec['ROOM'] = $device['room_name'];
+						$device_rec['ROOM'] = $device['room_name'] ?? "";
 						$device_rec['SKILL_ID'] = 'local';
 						$device_rec['UPDATED'] = date('Y-m-d H:i:s');
 						$device_rec['IOT_ID'] = $device['id'];
 						$device_rec['ID'] = SQLInsert('yadevices', $device_rec);
+					} else{
+						$update_station = false;
+						if($device_rec['HOUSE'] != $house['name']){
+							$device_rec['HOUSE'] = $house['name'];
+							$update_station = true;
+						}
+						if($device_rec['SKILL_ID'] != 'local'){
+							$device_rec['SKILL_ID'] = 'local';
+							$update_station = true;
+						}
+						if($device_rec['ROOM'] != $device['room_name']){
+							$device_rec['ROOM'] = $device['room_name'];
+							$update_station = true;
+						}
+						if($update_station){
+							$device_rec['UPDATED'] = date('Y-m-d H:i:s');
+							SQLUpdate('yadevices', $device_rec);
+						}
 					}
+					
 					//И умения и свойства Станции
 					//Добавим локальные возможности
 					$local = ['artist' => 'Исполнитель', 'track' => 'Название трека', 'cover' => 'Картинка альбома', 'text' => 'Алиса произнесёт текст', 'command' => 'Алиса выполнит команду', 'dialog' => 'Алиса произнесёт текст и будет ждать ответ', 'audio' => 'Ссылка на аудиофайл или поток', 'other' => 'Другие комады вида gif:URL', 'online' => 'Подключение к Станции установлено', "volume"=>'Громкость от 1 до 10'];
@@ -534,7 +553,7 @@ class yadevices extends module
 					$device_rec['DEVICE_TYPE'] = $device['type'];
 					$device_rec['HOUSE'] = $house['name'];
 					$device_rec['ROOM'] = $device['room_name'] ?? "";
-					$device_rec['SKILL_ID'] = $device['skill_id'];
+					$device_rec['SKILL_ID'] = $device['skill_id'] ?? "";
 					$device_rec['UPDATED'] = date('Y-m-d H:i:s');
 					if(empty($device_rec['ID'])) {
 						$device_rec['IOT_ID'] = $device['id'];
