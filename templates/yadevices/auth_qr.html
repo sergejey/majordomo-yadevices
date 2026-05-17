@@ -1,19 +1,86 @@
 <p>
-    Для работы данного способа, необходимо отсканировать QR-код с помощью Умной камеры в приложении Яндекс, войти в аккаунт и нажать "Продолжить" форме ниже.
+    Отсканируйте QR-код с помощью Умной камеры в приложении Яндекс или перейдите по кнопке ниже:<br>
+	 <a href="[#AUTH_URL#]" target="_blank" class="btn btn-primary">АВТОРИЗАЦИЯ В БРАУЗЕРЕ</a>
 </p>
-<form action="?" method="post" enctype="multipart/form-data">
-    [#if QR_URL!=""#]
-    <div class="from-group">
-        <img src="[#QR_URL#]">
-    </div>
-    [#endif QR_URL#]
-
+<form id="auth-form" action="?" method="post" enctype="multipart/form-data">
     <div class="form-group">
-        <input type="submit" id="Cookie_upload" name="submit" value="<#LANG_CONTINUE#>" class="btn btn-success">
+        <img src="<#ROOTHTML#>[#QR_URL#]" alt="QR код для авторизации">
+    </div>
+    <div class="form-group">
         <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
     </div>
+
+    <!-- Скрытые поля с необходимыми данными -->
     <input type="hidden" name="view_mode" value="<#VIEW_MODE#>">
     <input type="hidden" name="type" value="<#TYPE#>">
-    <input type="hidden" name="track_id" value="[#TRACK_ID#]">
     <input type="hidden" name="csrf_token" value="[#CSRF_TOKEN#]">
+    <input type="hidden" name="auth" value="[#AUTH#]">
 </form>
+
+<!-- Блок для отображения статуса проверки -->
+<div id="status-info" style="margin-top: 20px; padding: 10px; border-radius: 5px;">
+    <p id="status-message">Ожидание сканирования QR кода...</p>
+</div>
+
+<script>
+// Функция для периодической проверки статуса авторизации
+function startQRStatusCheck() {
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    const auth = document.querySelector('input[name="auth"]').value;
+
+    const pollInterval = 1000; // Интервал 1 секунда
+
+    function checkStatus() {
+        // Отправляем AJAX запрос для проверки статуса
+        $.ajax({
+            url: '/ajax/yadevices.html?check_qr_status=1',
+            type: 'POST',
+            data: {
+                csrf_token: csrfToken,
+                auth: auth
+            },
+            cache: false,
+            success: function(response) {
+                // Обновляем сообщение о статусе
+                document.getElementById('status-message').textContent =
+                    'Проверка статуса...';
+
+                // Проверяем, завершена ли авторизация
+                if (response.state === 'otp_auth_finished') {
+                    // Авторизация завершена — останавливаем опрос и отправляем форму с state=ok
+                    document.getElementById('status-message').innerHTML =
+					'<span style="color: green;">Авторизация успешно завершена!</span>';
+	
+					// Выполняем перенаправление с параметрами (без задержки)
+					window.location.href =
+						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+	
+				} else if (response.state === 'auth_error') {
+					// Ошибка авторизации — отправляем форму с state=error
+					document.getElementById('status-message').innerHTML =
+						'<span style="color: red;">Ошибка авторизации.</span>';
+		
+					// Выполняем перенаправление с параметрами (без задержки)
+					window.location.href =
+						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&error_msg=' + encodeURIComponent('Ошибка авторизации!');
+				} else {
+					// Если авторизация ещё не завершена, планируем следующий запрос
+					setTimeout(checkStatus, pollInterval);
+				}
+			},
+			error: function() {
+				console.error('Ошибка при проверке статуса авторизации');
+				// При ошибке повторяем запрос через секунду
+				setTimeout(checkStatus, pollInterval);
+			}
+		});
+	}
+	// Запускаем первую проверку
+	checkStatus();
+}
+
+// Запускаем проверку статуса после загрузки страницы
+document.addEventListener('DOMContentLoaded', function() {
+    startQRStatusCheck();
+});
+</script>

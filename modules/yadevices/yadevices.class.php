@@ -522,7 +522,7 @@ class yadevices extends module
 							$c_rec['TITLE'] = 'local.'.$title;
 							$c_rec['ALLOWPARAMS'] = $desc;
 							$c_rec['VALUE'] = '';
-							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'aswr_scenario') $c_rec['READONLY'] = 1;
+							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'online') $c_rec['READONLY'] = 1;
 							else $c_rec['READONLY'] = 0;
 							$c_rec['UPDATED'] = date('Y-m-d H:i:s');
 							$c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
@@ -538,7 +538,7 @@ class yadevices extends module
 							$c_rec['TITLE'] = 'cloud.'.$title;
 							$c_rec['ALLOWPARAMS'] = $desc;
 							$c_rec['VALUE'] = '';
-							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'aswr_scenario') $c_rec['READONLY'] = 1;
+							if($title == 'artist' or $title == 'track' or $title == 'cover' or $title == 'aswr_scenario' or $title == 'online') $c_rec['READONLY'] = 1;
 							else $c_rec['READONLY'] = 0;
 							$c_rec['UPDATED'] = date('Y-m-d H:i:s');
 							$c_rec['ID'] = SQLInsert('yadevices_capabilities', $c_rec);
@@ -916,6 +916,37 @@ class yadevices extends module
     {
         //$this->admin($out);
 		//dprint($out, 0);
+		//авторизация через QR
+		$check_qr_status = gr('check_qr_status');
+		if($check_qr_status){
+			header("HTTP/1.0: 200 OK\n");
+			header('Content-Type: application/json');
+			$use_cookie_file = YADEVICES_COOKIE_PATH.'_qr';
+			$csrf_token = gr('csrf_token');
+			$auth = urldecode(gr('auth'));
+			$headers = ["X-CSRF-Token: ".$csrf_token];
+			$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code/status', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $auth, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
+            $data = json_decode($result, true);
+			if($data["state"] != "otp_auth_finished"){
+				echo '{"state": "waiting"}';
+				exit;
+			}
+			$post = http_build_query(["track_id" => $data['trackId']]);
+			$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/sessions/get_session', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
+            $data = json_decode($result, true);
+			//dprint($result,0);
+			rename($use_cookie_file, YADEVICES_COOKIE_PATH);
+			$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
+            if ($checkCookie['status'] != 'ok') {
+                @unlink(YADEVICES_COOKIE_PATH);
+                echo '{"state": "auth_error"}';
+            } else {
+				copy(YADEVICES_COOKIE_PATH, YADEVICES_COOKIE_PATH.'_back');
+				$this->parseUserName();
+                echo '{"state": "otp_auth_finished"}';
+            }
+			exit;
+		}
         //Функции плеера
 		$station = gr('station');
 		if (empty($station)) $station = $this->id ?? $this->station;
@@ -1491,7 +1522,10 @@ EOD;
 						return $this->apiRequest($url, $method, $params, $repeating);
 					}
 				}
-				say("В модуле Yadevices отсутствует авторизация", 2);
+				say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
+				if(method_exists($this, 'sendnotification')) {
+					$this->sendnotification('Авторизация отсутствует', 'warning ');
+				}
 			}
 			$this->config['AUTHORIZED'] = 0;
 			$this->saveConfig();
@@ -1545,6 +1579,7 @@ EOD;
 			}
 		}		
 		$result = curl_exec($YaCurl);
+		//if($url == 'https://passport.yandex.ru/pwl-yandex/api/passport/auth/password/submit') dprint($result);
 		if(curl_error($YaCurl)) {
 			$result = '{"error:"'.curl_error($YaCurl).'"}';
 		}
@@ -1801,7 +1836,7 @@ function writeLog($message, $is_error = false){
 		$caller = $trace[1];
 		registerError("YaDevice -> {$caller['function']}", $message);
 	} else if ($this->config['ERRORMONITOR'] == 1 && $this->config['ERRORMONITORTYPE'] == 2) {
-		DebMes($message, 'yadevices');
+		debmes($message, 'yadevices');
 	}
 }
 
@@ -1875,17 +1910,17 @@ function type2url($type){
 //////////////////////////////Авторизация и токены//////////////////////////////////////////
 
     function getCSRFToken($cookie_file = YADEVICES_COOKIE_PATH) {
-		$result = $this->curl('https://passport.yandex.ru/am?app_platform=android', $cookie_file, '', '', [CURLOPT_HEADER=>true,CURLOPT_VERBOSE=>false,CURLOPT_FOLLOWLOCATION=>true]);
+		$result = $this->curl('https://passport.yandex.ru/pwl-yandex', $cookie_file, '', '', [CURLOPT_HEADER=>true,CURLOPT_VERBOSE=>false,CURLOPT_FOLLOWLOCATION=>true]);
 		$data = json_decode($result, true);
 		if(isset($data['error'])){
 			$this->writeLog("Ошибка подключении для получения CSRF токена: " . $data['error']);
 			return false;
 		}
-        if (preg_match('/"csrf_token" value="(.+?)"/', $result, $m)) {
+        if (preg_match('/__CSRF__ = "([^"]+)/', $result, $m)) {
             $token = $m[1];
             return $token;
         } else {
-            $this->writeLog("Failed to get CSRF token:\n" . $result);
+            $this->writeLog("Ошибка запроса CSRF токена. Токен по шаблону не найден.\n");
             return false;
         }
     }
