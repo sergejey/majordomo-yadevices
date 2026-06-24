@@ -568,9 +568,9 @@ class yadevices extends module
 							if($capabilitie['type'] == 'devices.capabilities.on_off') {
 								$c_type = $capabilitie['type'];
 							} else {
-								if($capabilitie['state']['instance']) {
+								if(isset($capabilitie['state']['instance']) && $capabilitie['state']['instance']) {
 									$c_type = $capabilitie['type'].'.'.$capabilitie['state']['instance'];
-								} else if($capabilitie['parameters']['instance']) {
+								} else if(isset($capabilitie['parameters']['instance']) && $capabilitie['parameters']['instance']) {
 									$c_type = $capabilitie['type'].'.'.$capabilitie['parameters']['instance'];
 								} else {
 									$c_type = $capabilitie['type'].'.unknown';
@@ -596,7 +596,7 @@ class yadevices extends module
 									}
 								} else {
 									$value = $capabilitie['state']['value'];
-								}  
+								}
 							}
 							if (is_null($value)) $value = 0;
 				
