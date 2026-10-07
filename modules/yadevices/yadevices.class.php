@@ -399,8 +399,10 @@ class yadevices extends module
 							}
 							//Ответы на сценарии обновляем всегда
 							if ($c_type == 'cloud.aswr_scenario' or $value != $req_skills['VALUE']) {
+								$station = SQLSelectOne("SELECT ID FROM yastations WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 								$params['NEW_VALUE'] = $value;
 								$params['OLD_VALUE'] = $req_skills['VALUE'];
+								$params['STATION_ID'] = $station['ID'];
 								$params['DEVICE_STATE'] = $currentStatus;
 								$params['ALLOWPARAMS'] = $req_skills['ALLOWPARAMS'];
 								$params['UPDATED'] = date('Y-m-d H:i:s');
