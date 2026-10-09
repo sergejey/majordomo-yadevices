@@ -12,10 +12,10 @@
 					<option value="15" [#if RELOAD_TIME==15#]selected[#endif#]>15 сек.</option>
 					<option value="30" [#if RELOAD_TIME==30#]selected[#endif#]>30 сек.</option>
 					<option value="60" [#if RELOAD_TIME==60#]selected[#endif#]>1 мин.</option>
-					<option value="120" [#if RELOAD_TIME==60#]selected[#endif#]>2 мин.</option>
-					<option value="180" [#if RELOAD_TIME==60#]selected[#endif#]>3 мин.</option>
+					<option value="120" [#if RELOAD_TIME==120#]selected[#endif#]>2 мин.</option>
+					<option value="180" [#if RELOAD_TIME==180#]selected[#endif#]>3 мин.</option>
 					<option value="300" [#if RELOAD_TIME==300#]selected[#endif#]>5 мин.</option>
-					<option value="600" [#if RELOAD_TIME==300#]selected[#endif#]>10 мин.</option>
+					<option value="600" [#if RELOAD_TIME==600#]selected[#endif#]>10 мин.</option>
 				</select>
 				<p class="help-block" style="font-size: 1rem;margin-top: 2px;">Чем ниже - тем рискованнее, могут забанить.</p>
 				[#module name="xray" action="service" cycle="yadevices"#]

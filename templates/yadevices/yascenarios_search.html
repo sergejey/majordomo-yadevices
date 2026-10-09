@@ -3,7 +3,7 @@
 	[#begin RESULT_TIMER#]
 	<div class="col-lg-3 col-md-4 col-sm-2 col-xs-12">
 		<div style="padding: 10px;border: 1px solid red;margin-bottom: 5px;text-align: center;">
-			<div><img src="http://avatars.mds.yandex.net/get-iot/icons-devices-[#DEVICE_TYPE#].svg/orig"></div>
+			<div><img src="https://avatars.mds.yandex.net/get-iot/icons-devices-[#DEVICE_TYPE#].svg/orig" alt="" loading="lazy"></div>
 			<div><b>[#NAME#]</b></div>
 			<div>Запуск [#SCHEDULED_TIME_HUMAN#]</div>
 		</div>
@@ -25,6 +25,7 @@
 						<th style="width: 15%;">Опции</th>
 					</tr>
 				</thead>
+				<tbody>
 				[#begin RESULT#]
 				[#if CLOUDSCENARIO == 1#]
 				<tr>
@@ -44,6 +45,7 @@
 					</td>
 				</tr>
 				[#end RESULT#]
+				</tbody>
 			</table>
 		</div>
 	</div>
