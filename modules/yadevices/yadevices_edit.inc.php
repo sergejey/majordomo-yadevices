@@ -11,11 +11,17 @@ if ($this->mode == 'switch') {
 }
 
 //Выгружаем данные по девайсу с IP Станции с таким же IOT_ID
-$device = SQLSelectOne("SELECT yadevices.*, yastations.IP, yastations.ID as yastationID FROM yadevices LEFT JOIN yastations ON yadevices.IOT_ID=yastations.IOT_ID WHERE yadevices.ID = '".dbSafe((int)$id)."'");
+$device = SQLSelectOne("SELECT yadevices.*, yastations.IP, yastations.ID as yastationID FROM yadevices LEFT JOIN yastations ON yadevices.IOT_ID=yastations.IOT_ID WHERE yadevices.ID = ".(int)$id);
+if (empty($device['ID'])) {
+    // Записи нет - возвращаем пользователя к списку устройств вместо пустой формы
+    $this->redirect("?view_mode=search_yadevices");
+    return;
+}
 
-include_once "utils/devices_url.php";
+$devices_URL = array();
+include_once DIR_MODULES . "yadevices/utils/devices_url.php";
 
-$properties = SQLSelect("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=".$device['ID']." ORDER BY TITLE");
+$properties = SQLSelect("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=".(int)$device['ID']." ORDER BY TITLE");
 $total = count($properties);
 $state = '';
 for($i=0;$i<$total;$i++) {
@@ -23,11 +29,11 @@ for($i=0;$i<$total;$i++) {
 		$old_linked_object=$properties[$i]['LINKED_OBJECT'];
 		$old_linked_property=$properties[$i]['LINKED_PROPERTY'];
 		global ${'linked_object'.$properties[$i]['ID']};
-		$properties[$i]['LINKED_OBJECT']=trim(${'linked_object'.$properties[$i]['ID']});
+		$properties[$i]['LINKED_OBJECT']=trim((string)(${'linked_object'.$properties[$i]['ID']} ?? ''));
 		global ${'linked_property'.$properties[$i]['ID']};
-		$properties[$i]['LINKED_PROPERTY']=trim(${'linked_property'.$properties[$i]['ID']});
+		$properties[$i]['LINKED_PROPERTY']=trim((string)(${'linked_property'.$properties[$i]['ID']} ?? ''));
 		global ${'linked_method'.$properties[$i]['ID']};
-		$properties[$i]['LINKED_METHOD']=trim(${'linked_method'.$properties[$i]['ID']});
+		$properties[$i]['LINKED_METHOD']=trim((string)(${'linked_method'.$properties[$i]['ID']} ?? ''));
 		// Если юзер удалил привязанные свойство и метод, но забыл про объект, то очищаем его.
 		if ($properties[$i]['LINKED_OBJECT'] != '' && ($properties[$i]['LINKED_PROPERTY'] == '' && $properties[$i]['LINKED_METHOD'] == '')) {
 			$properties[$i]['LINKED_OBJECT'] = '';
@@ -44,7 +50,7 @@ for($i=0;$i<$total;$i++) {
     }
 	
     //Скроем local умения, если у Станции не прописан IP и пропишем ID
-	if(stripos($device['DEVICE_TYPE'], 'devices.types.station') !== false){
+	if(stripos((string)$device['DEVICE_TYPE'], 'devices.types.station') !== false){
 		if ($properties[$i]['TITLE']=='local.online' and $properties[$i]['VALUE'] == 1){
 			$state = '_on';
 		}			
@@ -63,22 +69,24 @@ for($i=0;$i<$total;$i++) {
     $properties[$i]['CAN_LINK'] = 1;
 }
 
-if(stripos($device['DEVICE_TYPE'], 'devices.types.station') !== false) {
+if(stripos((string)$device['DEVICE_TYPE'], 'devices.types.station') !== false) {
 	$device['STATION'] = true;
 }
 
 //Добавим иконки из БД
 $device["ICON"] = $devices_URL[$device['DEVICE_TYPE'].$state] ?? 'https://yastatic.net/s3/pudya/app/_/cf97acc6d0252b23.webp';
+$device['TITLE'] = htmlspecialchars((string)$device['TITLE']);
 
 $out['PROPERTIES'] = $properties;
 $out['PROPERTIES_COUNT'] = $total;
 
 //Далее идем в скилы
-if($device['SKILL_ID'] != 'local'){
-	$skills = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/skills/'.$device['SKILL_ID']);
-	$out['SKILLS_ID'] = $device['SKILL_ID'] ?? '';
-	$out['SKILLS_NAME'] = htmlspecialchars($skills['name']) ?? '';
-	$out['SKILLS_DESCRIPTION'] = htmlspecialchars($skills['description']) ?? '';
-	$out['SKILLS_DEVELOPER_NAME'] = htmlspecialchars($skills['developer_name']) ?? '';
+if (!empty($device['SKILL_ID']) && $device['SKILL_ID'] != 'local'){
+	$skills = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/skills/'.urlencode($device['SKILL_ID']));
+	if (!is_array($skills)) $skills = array();
+	$out['SKILLS_ID'] = $device['SKILL_ID'];
+	$out['SKILLS_NAME'] = htmlspecialchars($skills['name'] ?? '');
+	$out['SKILLS_DESCRIPTION'] = htmlspecialchars($skills['description'] ?? '');
+	$out['SKILLS_DEVELOPER_NAME'] = htmlspecialchars($skills['developer_name'] ?? '');
 }
 outHash($device,$out);
