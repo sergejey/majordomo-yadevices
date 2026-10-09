@@ -22,9 +22,9 @@ class WscMain implements WscCommonsContract
     private $socket;
     private $isConnected = false;
     private $isClosing = false;
-    private $lastOpcode;
-    private $closeStatus;
-    private $hugePayload;
+    private $lastOpcode = '';
+    private $closeStatus = 0;
+    private $hugePayload = '';
 
     private static $opcodes = [
         CommonsContract::EVENT_TYPE_CONTINUATION => 0,
@@ -47,6 +47,15 @@ class WscMain implements WscCommonsContract
     protected function connect()
     {
         $urlParts = parse_url($this->socketUrl);
+
+        // Без этой проверки пустая или битая ссылка приводила к TypeError в getScheme()
+        // (Error, а не Exception), который не перехватывался вызывающим кодом
+        if (!is_array($urlParts) || empty($urlParts['scheme']) || empty($urlParts['host'])) {
+            throw new BadUriException(
+                "Malformed socket url: '{$this->socketUrl}'.",
+                CommonsContract::CLIENT_INCORRECT_SCHEME
+            );
+        }
 
         $this->config->setScheme($urlParts['scheme']);
         $this->config->setHost($urlParts['host']);
@@ -72,7 +81,9 @@ class WscMain implements WscCommonsContract
             );
         }
 
-        if ($this->socket === false) {
+        if ($this->socket === false || $this->socket === null) {
+            $errstr = $errstr ?? 'unknown error';
+            $errno = $errno ?? 0;
             throw new ConnectionException(
                 "Could not open socket to \"{$this->config->getHost()}:{$this->config->getPort()}\": $errstr ($errno).",
                 CommonsContract::CLIENT_COULD_NOT_OPEN_SOCKET
@@ -244,7 +255,7 @@ class WscMain implements WscCommonsContract
     {
         $this->config->setTimeout($timeout);
         if ($this->socket && get_resource_type($this->socket) === 'stream') {
-            stream_set_timeout($this->socket, $timeout, $microSecs);
+            stream_set_timeout($this->socket, $timeout, (int)$microSecs);
         }
 
         return $this;

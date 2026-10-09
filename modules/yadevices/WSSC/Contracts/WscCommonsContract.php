@@ -12,6 +12,9 @@ interface WscCommonsContract
     const TCP_SCHEME = 'tcp://';
 
     const MAX_BYTES_READ             = 65535;
+    // Предел заявленной длины кадра. Кадры Станций Яндекс на порядки меньше,
+    // а без предела битый кадр приводит к неограниченному росту памяти процесса.
+    const MAX_FRAME_LENGTH           = 8388608; // 8 МБ
     const DEFAULT_TIMEOUT            = 5;
     const DEFAULT_FRAGMENT_SIZE      = 4096;
     const DEFAULT_RESPONSE_HEADER    = 1024;
