@@ -638,8 +638,9 @@ class yadevices extends module
 							}
 						}
 					}
-					//Значения датчиков
-					if(isset($device["properties"]) and is_array($device["properties"])) {
+					//Значения датчиков (+ статус online, в т.ч. для устройств без датчиков: лампы, розетки)
+						if(!isset($device["properties"]) || !is_array($device["properties"])) $device["properties"] = [];
+						if(isset($device["properties"]) and is_array($device["properties"])) {
 						//Запихнем еще наш статус в массив
 						$onlineArray = [
 							'type' => 'devices.online',
