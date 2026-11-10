@@ -1138,10 +1138,10 @@ class yadevices extends module
     {
         if (empty($command)) return false;
 		if(!is_array($station)){
-			$station = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID=" . (int)$station);
+			$station = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . DBSafe($station) . "'");
 		}
         if (empty($station['ID']) || empty($station['IP'])) return false;
-        if (isset($station['DEVICE_TOKEN'])) {
+        if (!empty($station['DEVICE_TOKEN'])) {
 			$updatedCycle = gg('cycle_yadevicesRun');
 			if ((time() - (int)$updatedCycle < 16)) {
 				if($data != '') $data = '^' . $data;
