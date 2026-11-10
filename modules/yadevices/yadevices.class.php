@@ -1510,29 +1510,33 @@ EOD;
         $info = curl_getinfo($YaCurl);
         curl_close($YaCurl);
 		if($info['http_code'] == 401){
-			$this->getConfig();
-			if($this->config['AUTHORIZED'] == 1){
-				if(file_exists(YADEVICES_COOKIE_PATH.'_back')){
+				$this->getConfig();
+				$wasAuthorized = !empty($this->config['AUTHORIZED']);
+				//Сначала фиксируем потерю авторизации: защита от бесконечной рекурсии
+				//(бэкап тоже протух) и от петли say() -> SAY -> облачный TTS -> 401 -> say()
+				$this->config['AUTHORIZED'] = 0;
+				$this->saveConfig();
+				if($wasAuthorized && !$repeating && file_exists(YADEVICES_COOKIE_PATH.'_back')){
 					copy(YADEVICES_COOKIE_PATH.'_back', YADEVICES_COOKIE_PATH);
-					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-					if ($checkCookie['status'] != 'ok') {
-						@unlink(YADEVICES_COOKIE_PATH);
-						@unlink(YADEVICES_COOKIE_PATH.'_back');
-						$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
-					} else {
+					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios', 'GET', 0, 1);
+					if (is_array($checkCookie) && ($checkCookie['status'] ?? '') == 'ok') {
+						$this->config['AUTHORIZED'] = 1;
+						$this->saveConfig();
 						$this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
-						return $this->apiRequest($url, $method, $params, $repeating);
+						return $this->apiRequest($url, $method, $params, 1);
+					}
+					@unlink(YADEVICES_COOKIE_PATH);
+					@unlink(YADEVICES_COOKIE_PATH.'_back');
+					$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
+				}
+				if($wasAuthorized){
+					say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
+					if(method_exists($this, 'sendnotification')) {
+						$this->sendnotification('Авторизация отсутствует', 'warning');
 					}
 				}
-				say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
-				if(method_exists($this, 'sendnotification')) {
-					$this->sendnotification('Авторизация отсутствует', 'warning ');
-				}
+				return 'Unauthorized';
 			}
-			$this->config['AUTHORIZED'] = 0;
-			$this->saveConfig();
-			return 'Unauthorized';
-		}
         $request_headers = $info['request_header'] ?? '';
         if ($debug) {
             dprint("REQUEST HEADERS:",false);
