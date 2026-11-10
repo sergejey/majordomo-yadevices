@@ -567,7 +567,8 @@ class yadevices extends module
 					//Циклом пройдемся по всем умениям
 					if(isset($device["capabilities"]) and is_array($device["capabilities"])) {
 						foreach($device["capabilities"] as $capabilitie) {
-							if($capabilitie['type'] == 'devices.capabilities.on_off') {
+								$value = null; //иначе значение «протекает» из предыдущего умения
+								if($capabilitie['type'] == 'devices.capabilities.on_off') {
 								$c_type = $capabilitie['type'];
 							} else {
 								if(isset($capabilitie['state']['instance']) && $capabilitie['state']['instance']) {
