@@ -404,7 +404,13 @@ class yadevices extends module
 							}
 							$req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = " . (int)$rec_device['ID']);
 							if(empty($req_skills['ID'])) {
-								$this->refreshDevices();
+								//Умения Станций в БД не хранятся: без ограничения полный опрос облака
+								//запускался бы на каждое событие от Станции. Не чаще раза в 5 минут.
+								static $lastCapsRefresh = 0;
+								if (time() - $lastCapsRefresh > 300) {
+									$lastCapsRefresh = time();
+									$this->refreshDevices();
+								}
 								continue;
 							}
 							//Основные умения, меняем значение
@@ -1260,7 +1266,7 @@ class yadevices extends module
 			$station = SQLSelectOne("SELECT * FROM yastations WHERE IOT_ID='" . DBSafe($station) . "'");
 		}
         if (empty($station['ID']) || empty($station['IP'])) return false;
-        if (isset($station['DEVICE_TOKEN'])) {
+        if (!empty($station['DEVICE_TOKEN'])) {
 			$updatedCycle = gg('cycle_yadevicesRun');
 			if ((time() - (int)$updatedCycle < 16)) {
 				if($data != '') $data = '^' . $data;
