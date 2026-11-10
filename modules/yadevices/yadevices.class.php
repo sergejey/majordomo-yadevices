@@ -1478,8 +1478,8 @@ EOD;
     {
         $debug = 0;
 
-        if ($method != 'GET' && !isset($this->csrf_token)) {
-            $token = $this->getToken();
+        if ($method != 'GET' && empty($this->csrf_token)) {
+            $this->getToken();
         }
 
         $YaCurl = curl_init();
@@ -1546,7 +1546,7 @@ EOD;
         }
         if (!$repeating &&
             (!isset($data['code']) || $data['code']!= 'BAD_REQUEST') &&   
-            ($result_code==403 || (isset($data['status']) && $data['status'] == 'error'))
+            ($result_code==403 || ($method == 'GET' && isset($data['status']) && $data['status'] == 'error'))
         ) {
             if ($debug) {
                 dprint("REPEATING: ".$method." ".$url,false);
