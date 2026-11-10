@@ -1335,12 +1335,10 @@ class yadevices extends module
 						$this->sendCloudTTS($properties[$i]['IOT_ID'], $value, $command);
 				} else {
 					$sendCMD = $this->sendValueToYandex($properties[$i]['IOT_ID'], $properties[$i]['TITLE'], $value);
-					$sendCMD = json_encode($sendCMD);
-	
-					if ($sendCMD->status == 'ok') {
+					if (is_array($sendCMD) && ($sendCMD['status'] ?? '') == 'ok') {
 						$this->writeLog('sendValueToYandex() -> Успешно! ' . $object . '.' . $property . ' = ' . $value);
 					} else {
-						$this->writeLog('sendValueToYandex() -> Неверная команда: ' . $object . '.' . $property);
+						$this->writeLog('sendValueToYandex() -> Ошибка: ' . $object . '.' . $property . ' ответ: ' . json_encode($sendCMD, JSON_UNESCAPED_UNICODE), true);
 					}					
 				}
             } else {
