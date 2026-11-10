@@ -189,11 +189,12 @@ class yadevices extends module
 					$params['data'] = $params['data'].'^'.$params['volume'];
 				}
                 if ($params['command'] == 'setVolume') {
-					if(isset($params['volume'])){
-						(float)$params['data'] = is_float($params['volume']) ? $params['volume'] : $params['volume'] * 0.1;
-					} else {
-						(float)$params['data'] = $params['data'] * 0.1;
-					}
+						//Через HTTP API всё приходит строкой, is_float() всегда false.
+						//Шкала 0..10; дробь с точкой <= 1 (0.5) считаем уже нормализованной 0..1
+						$raw = (string)($params['volume'] ?? $params['data']);
+						$vol = (float)str_replace(',', '.', $raw);
+						if (strpbrk($raw, '.,') === false || $vol > 1) $vol *= 0.1;
+						$params['data'] = max(0, min(1, $vol));
 				} else if($params['command'] == 'volumeUp' or $params['command'] == 'volumeDown'){
 					$params['data'] = $params['command'];
 				} else if (isset($params['say'])) { //для обратной совместимости
