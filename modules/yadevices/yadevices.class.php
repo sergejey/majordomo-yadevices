@@ -373,7 +373,8 @@ class yadevices extends module
 								}
 							}
 							$req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = '" . $rec_device['ID'] . "'");
-							if(empty($req_skills)) $this->refreshDevices;
+							//Неизвестное умение (в т.ч. умения Станций, которые в БД не хранятся) — пропускаем, без refreshDevices на каждое сообщение
+								if(empty($req_skills['ID'])) continue;
 							//Основные умения, меняем значение
 							$value = '?';
 							if (isset($capabilitie['state']['value'])){
@@ -420,6 +421,7 @@ class yadevices extends module
 							$p_type = $propertie['type'] . '.' . $propertie['parameters']['instance'];
 							//Получаем по каждом свойству по отдельности
 							$req_prop = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($p_type) . "' AND YADEVICE_ID = '" . $rec_device['ID'] . "'");
+								if(empty($req_prop['ID'])) continue;
 							//Основные датчики
 							$value = $propertie['state']['value'] ?? '';
 							if ($value != $req_prop['VALUE']) {
