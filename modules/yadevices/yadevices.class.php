@@ -366,7 +366,7 @@ class yadevices extends module
 							} else {
 								if (isset($capabilitie['state']['instance'])) {
 									$c_type = $capabilitie['type'] . '.' . $capabilitie['state']['instance'];
-								} else if ($capabilitie['parameters']['instance']) {
+								} else if (!empty($capabilitie['parameters']['instance'])) {
 									$c_type = $capabilitie['type'] . '.' . $capabilitie['parameters']['instance'];
 								} else {
 									$c_type = $capabilitie['type'] . '.unknown';
@@ -375,7 +375,7 @@ class yadevices extends module
 							$req_skills = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE TITLE = '" . dbSafe($c_type) . "' AND YADEVICE_ID = '" . $rec_device['ID'] . "'");
 							if(empty($req_skills)) $this->refreshDevices;
 							//Основные умения, меняем значение
-							$value = '?';
+								$value = null;
 							if (isset($capabilitie['state']['value'])){
 								if(is_bool($capabilitie['state']['value']) == true) {
 									if ($capabilitie['state']['value'] == true) {
@@ -397,7 +397,9 @@ class yadevices extends module
 									$value = $capabilitie['state']['value'];
 								}  
 							}
-							//Ответы на сценарии обновляем всегда
+							//Нет значения в сообщении — нечего обновлять (раньше в свойство писался '?')
+								if ($value === null) continue;
+								//Ответы на сценарии обновляем всегда
 							if ($c_type == 'cloud.aswr_scenario' or $value != $req_skills['VALUE']) {
 								$station = SQLSelectOne("SELECT ID FROM yastations WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 								$params['NEW_VALUE'] = $value;
