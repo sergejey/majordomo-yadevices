@@ -622,8 +622,12 @@ class yadevices extends module
 							$c_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $c_type . "'");
 							
 							if($allowparam) {
-								$c_rec['ALLOWPARAMS'] = substr($allowparam,0,-1);
-							}
+									$c_rec['ALLOWPARAMS'] = rtrim($allowparam, ', ');
+								}
+								//Изменения, пришедшие при полном опросе (старт цикла, переподключение), тоже передаем в привязки
+								if (!empty($c_rec['ID']) && (string)$c_rec['VALUE'] !== (string)$value) {
+									$this->setProperty($c_rec, $value, ['NEW_VALUE' => $value, 'OLD_VALUE' => $c_rec['VALUE'], 'UPDATED' => date('Y-m-d H:i:s'), 'MODULE' => $this->name], $c_type);
+								}
 							$c_rec['VALUE'] = $value;
 							$c_rec['YADEVICE_ID'] = $device_rec['ID'];
 							$c_rec['TITLE'] = $c_type;
@@ -656,7 +660,10 @@ class yadevices extends module
 							$value = $propertie['state']['value'] ?? '';
 				
 							//Запросим из БД текущие значения
-							$p_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . $p_type . "'");
+							$p_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . $device_rec['ID'] . " AND TITLE='" . DBSafe($p_type) . "'");
+								if (!empty($p_rec['ID']) && (string)$p_rec['VALUE'] !== (string)$value) {
+									$this->setProperty($p_rec, $value, ['NEW_VALUE' => $value, 'OLD_VALUE' => $p_rec['VALUE'], 'UPDATED' => date('Y-m-d H:i:s'), 'MODULE' => $this->name], $p_type);
+								}
 							$p_rec['VALUE'] = $value;
 							$p_rec['UPDATED'] = date('Y-m-d H:i:s');
 							$p_rec['YADEVICE_ID'] = $device_rec['ID'];
