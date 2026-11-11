@@ -40,10 +40,15 @@ if ($type == 'otp') {
 
 			$result = $this->curl('https://passport.yandex.ru/registration-validations/auth/multi_step/commit_password', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR => $use_cookie_file]);
             $data = json_decode($result, true);
-            if ($data['status']=='ok' || $data['errors'][0]=='account.auth_passed') {
-                rename($use_cookie_file, YADEVICES_COOKIE_PATH);
+            $status = is_array($data) ? ($data['status'] ?? '') : '';
+            $firstError = (is_array($data) && isset($data['errors'][0])) ? $data['errors'][0] : '';
+            if ($status == 'ok' || $firstError == 'account.auth_passed') {
+                if (!@rename($use_cookie_file, YADEVICES_COOKIE_PATH)) {
+                    $out['ERR_MSG'] = 'Не удалось сохранить файл авторизации. Проверьте права на каталог cms/yadevices.';
+                    return;
+                }
                 $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-                if ($checkCookie['status'] != 'ok') {
+                if (!is_array($checkCookie) || ($checkCookie['status'] ?? '') != 'ok') {
                     @unlink(YADEVICES_COOKIE_PATH);
                     $out['ERR_MSG'] = 'Ошибка авторизации!';
                     return;
@@ -61,7 +66,7 @@ if ($type == 'otp') {
         $username = gr('username');
         if ($username) {
             $csrf_token = $this->getCSRFToken($use_cookie_file);
-            if ($csrf_token!='') {
+            if ($csrf_token) {
                 $out['CSRF_TOKEN'] = $csrf_token;
                 $post = array(
                     'csrf_token' => $csrf_token,
@@ -73,7 +78,7 @@ if ($type == 'otp') {
                 }
 				$result = $this->curl('https://passport.yandex.ru/registration-validations/auth/multi_step/start', $use_cookie_file, '', $postvars, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR => $use_cookie_file]);
                 $data = json_decode($result, true);
-                if ($data['status']=='ok') {
+                if (is_array($data) && ($data['status'] ?? '') == 'ok' && !empty($data['track_id'])) {
                     $track_id = $data['track_id'];
                     $out['TRACK_ID']=$track_id;
                 } else {
@@ -96,6 +101,10 @@ if ($type == 'qr') {
 		$headers = ["X-CSRF-Token: ".$csrf_token];
 		$auth = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/password/submit', $use_cookie_file, array_merge($headers, ["Content-Type: application/json"]), $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file, CURLOPT_USERAGENT => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36']);
 		$auth_data = json_decode($auth, true);
+		if (!is_array($auth_data) || empty($auth_data['track_id'])) {
+			$out['ERR_MSG'] = 'Яндекс не выдал идентификатор сессии для QR-кода. Повторите попытку.';
+			return;
+		}
 		$post = http_build_query([
 						"location_id"=> 0,
 						"magic_track_id"=> $auth_data['track_id'],
@@ -103,13 +112,21 @@ if ($type == 'qr') {
 				]);
 		$result = $this->curl('https://passport.yandex.ru/pwl-yandex/api/passport/auth/magic/code', $use_cookie_file, $headers, $post, [CURLOPT_COOKIEFILE=>$use_cookie_file, CURLOPT_COOKIEJAR=>$use_cookie_file]);
 		$data = json_decode($result, true);
-		include_once(ROOT . "modules/yadevices/phpqrcode/qrlib.php");
-		$path = ROOT . "cms/cached/yaqrcode.png";
+		if (!is_array($data) || empty($data['link'])) {
+			$out['ERR_MSG'] = 'Яндекс не выдал ссылку для QR-кода. Повторите попытку.';
+			return;
+		}
+		$cache_dir = ROOT . "cms/cached";
+		if (!is_dir($cache_dir)) @mkdir($cache_dir, 0775, true);
+		include_once(DIR_MODULES . "yadevices/phpqrcode/qrlib.php");
+		$qr_name = "yaqrcode.png";
+		$path = $cache_dir . "/" . $qr_name;
 		QRcode::png($data['link'], $path, QR_ECLEVEL_L, 9, 2);
 		$out['TRACK_ID'] = $auth_data['track_id'];
 		$out['CSRF_TOKEN'] = $csrf_token;
 		$out['AUTH'] = urlencode($auth);
-		$out['QR_URL'] = "cms/cached/yaqrcode.png";
+		// Метка времени отключает кеширование картинки браузером при повторных попытках
+		$out['QR_URL'] = "cms/cached/" . $qr_name . "?t=" . time();
 		$out['AUTH_URL'] = $data['link'];	
 	} else {
 		$out['ERR_MSG'] = 'Ошибка получения CSRF-токена';
@@ -119,10 +136,13 @@ if ($type == 'qr') {
 
 if ($type == 'cookie') {
     global $file;
-    if (is_file($file)) {
-        move_uploaded_file($file, YADEVICES_COOKIE_PATH);
+    if (isset($file) && is_string($file) && is_file($file)) {
+        if (!move_uploaded_file($file, YADEVICES_COOKIE_PATH)) {
+            $out['ERR_MSG'] = 'Не удалось сохранить загруженный файл. Проверьте права на каталог cms/yadevices.';
+            return;
+        }
         $checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-        if ($checkCookie['status'] != 'ok') {
+        if (!is_array($checkCookie) || ($checkCookie['status'] ?? '') != 'ok') {
             @unlink(YADEVICES_COOKIE_PATH);
             $out['ERR_MSG'] = 'Файл который вы загружаете не является Cookie файлом с сайта Яндекс или он устарел.';
             return;
