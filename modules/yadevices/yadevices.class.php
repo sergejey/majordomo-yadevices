@@ -341,23 +341,19 @@ class yadevices extends module
 						continue;
 					}
 					//добавим статус в массив для дальнейшей обработки
-					if (isset($device['state']) && $device['state'] == 'online') {
-						$currentStatus = 1;
-					} else {
-						$currentStatus = 0;
-					}
-					$onlineArray = [
-						'type' => 'devices',
-						'state' => [
-							'value' => $currentStatus,
-						],
-						'parameters' => [
-							'instance' => 'online',
-						],
-					];
-					$device["properties"][] = $onlineArray;
-					//Циклом пройдемся по всем умениям
-					if (isset($device["capabilities"]) and is_array($device["capabilities"])) {
+					//В update_states поле state приходит не всегда: без него статус online не трогаем
+						$currentStatus = '';
+						if (isset($device['state'])) {
+							$currentStatus = $device['state'] == 'online' ? 1 : 0;
+							$device["properties"][] = [
+								'type' => 'devices',
+								'state' => ['value' => $currentStatus],
+								'parameters' => ['instance' => 'online'],
+							];
+						}
+						
+						//Циклом пройдемся по всем умениям
+						if (isset($device["capabilities"]) and is_array($device["capabilities"])) {
 						foreach ($device["capabilities"] as $capabilitie) {
 							if ($capabilitie['type'] == 'devices.capabilities.quasar.server_action') {
 								$c_type = 'cloud.aswr_scenario';
