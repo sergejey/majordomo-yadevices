@@ -4,7 +4,7 @@
 </p>
 <form id="auth-form" action="?" method="post" enctype="multipart/form-data">
     <div class="form-group">
-        <img src="<#ROOTHTML#>[#QR_URL#]" alt="QR код для авторизации">
+        <img src="<#ROOTHTML#>[#QR_URL#]" alt="QR код для авторизации" width="240" height="240">
     </div>
     <div class="form-group">
         <a href="?view_mode=<#VIEW_MODE#>" class="btn btn-default"><#LANG_CANCEL#></a>
@@ -29,40 +29,48 @@ function startQRStatusCheck() {
     const auth = document.querySelector('input[name="auth"]').value;
 
     const pollInterval = 1000; // Интервал 1 секунда
+    const maxAttempts = 300;   // Не опрашиваем Яндекс дольше 5 минут
+    let attempts = 0;
 
     function checkStatus() {
+        if (++attempts > maxAttempts) {
+            document.getElementById('status-message').innerHTML =
+                '<span style="color: #a00;">Время ожидания истекло. Обновите страницу и получите новый QR-код.</span>';
+            return;
+        }
         // Отправляем AJAX запрос для проверки статуса
         $.ajax({
-            url: '/ajax/yadevices.html?check_qr_status=1',
+            url: ROOTHTML + 'ajax/yadevices.html?check_qr_status=1',
             type: 'POST',
             data: {
                 csrf_token: csrfToken,
                 auth: auth
             },
             cache: false,
+            dataType: 'json',
             success: function(response) {
                 // Обновляем сообщение о статусе
                 document.getElementById('status-message').textContent =
-                    'Проверка статуса...';
+                    'Ожидание сканирования QR-кода... (' + attempts + ')';
 
                 // Проверяем, завершена ли авторизация
-                if (response.state === 'otp_auth_finished') {
+                if (response && response.state === 'otp_auth_finished') {
                     // Авторизация завершена — останавливаем опрос и отправляем форму с state=ok
                     document.getElementById('status-message').innerHTML =
 					'<span style="color: green;">Авторизация успешно завершена!</span>';
 	
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
+						ROOTHTML + 'panel/yadevices.html?view_mode=auth&refresh_devices=1&ok_msg=' + encodeURIComponent('Успешная авторизация!');
 	
-				} else if (response.state === 'auth_error') {
+				} else if (response && response.state === 'auth_error') {
 					// Ошибка авторизации — отправляем форму с state=error
 					document.getElementById('status-message').innerHTML =
 						'<span style="color: red;">Ошибка авторизации.</span>';
 		
 					// Выполняем перенаправление с параметрами (без задержки)
 					window.location.href =
-						'/panel/yadevices.html?view_mode=auth&refresh_devices=1&error_msg=' + encodeURIComponent('Ошибка авторизации!');
+						ROOTHTML + 'panel/yadevices.html?view_mode=auth&refresh_devices=1&err_msg=' + encodeURIComponent('Ошибка авторизации!');
 				} else {
 					// Если авторизация ещё не завершена, планируем следующий запрос
 					setTimeout(checkStatus, pollInterval);

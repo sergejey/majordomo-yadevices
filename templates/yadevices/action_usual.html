@@ -1,13 +1,14 @@
 <script>
-let jjj = 0; //Без этого не работает почему-то
-let currentVolume_[#STATION_ID#] = 0;
-let currentDuration_[#STATION_ID#] = 0;
-let currentProgress_[#STATION_ID#] = 0;
+// var, а не let: одна и та же станция может быть выведена на странице дважды,
+// повторное объявление let обрывало разбор всего блока с SyntaxError
+var currentVolume_[#STATION_ID#] = 0;
+var currentDuration_[#STATION_ID#] = 0;
+var currentProgress_[#STATION_ID#] = 0;
 var isPlaying_[#STATION_ID#] = false;
-let songName_[#STATION_ID#] = '';
-let artistName_[#STATION_ID#] = '';
-let coverUrl_[#STATION_ID#] = 'music.yandex.ru/blocks/meta/i/og-image.png';
-let on_[#STATION_ID#] = false;
+var songName_[#STATION_ID#] = '';
+var artistName_[#STATION_ID#] = '';
+var coverUrl_[#STATION_ID#] = 'music.yandex.ru/blocks/meta/i/og-image.png';
+var on_[#STATION_ID#] = false;
 
 $(document).ready(function () {
   $.subscribe('wsConnected', function () {
@@ -45,28 +46,28 @@ $(document).ready(function () {
 	  //На самом деле в текущей реализации особо смысла не имеет, потому что устройство оффлайн, если данные после load() не пришли.
 	}
 
-    updateUI();
+    updateUI_[#STATION_ID#]();
   });
 
-  load([#STATION_ID#]);
+  load_[#STATION_ID#]([#STATION_ID#]);
 });
 
-function load(station) {
+function load_[#STATION_ID#](station) {
   $.getJSON({
     url: ROOTHTML + 'module/yadevices.html?station=' + station + '&ajax=1',
     success: function (res) {
       $('#cover_[#STATION_ID#]').removeClass('unavailable');
-	  resetUI();
-      $('#loader').hide();
-      $('#btn').show();
+
+	  resetUI_[#STATION_ID#]();
+      $('#btn_[#STATION_ID#]').show();
     }
   });
 }
 
-function updateUI() {
+function updateUI_[#STATION_ID#]() {
   $('#volume_[#STATION_ID#]').text(currentVolume_[#STATION_ID#]);
-  $('#trackCurrent_[#STATION_ID#]').text(formatTime(currentProgress_[#STATION_ID#]));
-  $('#trackDuration_[#STATION_ID#]').text(formatTime(currentDuration_[#STATION_ID#]));
+  $('#trackCurrent_[#STATION_ID#]').text(formatTime_[#STATION_ID#](currentProgress_[#STATION_ID#]));
+  $('#trackDuration_[#STATION_ID#]').text(formatTime_[#STATION_ID#](currentDuration_[#STATION_ID#]));
 
 
   $('#trackProgress_[#STATION_ID#]').attr('max', currentDuration_[#STATION_ID#]).val(currentProgress_[#STATION_ID#]);
@@ -83,20 +84,20 @@ function updateUI() {
     'background-color': 'rgba([#BGCOLOR#],1)'
   });
 
-  allowBtn('hasPause_[#STATION_ID#]', isPlaying_[#STATION_ID#]);
-  allowBtn('hasPlay_[#STATION_ID#]', !isPlaying_[#STATION_ID#]);
-  allowBtn('hasNext_[#STATION_ID#]', true);
-  allowBtn('hasPrev_[#STATION_ID#]', true);
+  allowBtn_[#STATION_ID#]('hasPause_[#STATION_ID#]', isPlaying_[#STATION_ID#]);
+  allowBtn_[#STATION_ID#]('hasPlay_[#STATION_ID#]', !isPlaying_[#STATION_ID#]);
+  allowBtn_[#STATION_ID#]('hasNext_[#STATION_ID#]', true);
+  allowBtn_[#STATION_ID#]('hasPrev_[#STATION_ID#]', true);
 }
 
-function resetUI() {
+function resetUI_[#STATION_ID#]() {
   $('#cover_[#STATION_ID#]').css({
-    background: `linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(${coverUrl_[#STATION_ID#]}) 0% 0% / contain no-repeat`,
+    background: `linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba([#BGCOLOR#],0.50) 20%, rgba([#BGCOLOR#],1) 25%), url(//${coverUrl_[#STATION_ID#]}) 0% 0% / contain no-repeat`,
     'background-color': 'rgba([#BGCOLOR#],1)'
   });
 
-  allowBtn('hasPause_[#STATION_ID#]', false);
-  allowBtn('hasPlay_[#STATION_ID#]', true);
+  allowBtn_[#STATION_ID#]('hasPause_[#STATION_ID#]', false);
+  allowBtn_[#STATION_ID#]('hasPlay_[#STATION_ID#]', true);
 
   $('#songName_[#STATION_ID#]').text('[#TITLE#]');
   $('#artistName_[#STATION_ID#]').text('Управление музыкой');
@@ -104,17 +105,27 @@ function resetUI() {
   $('#trackDuration_[#STATION_ID#]').text("00:00");
 }
 
-function formatTime(seconds) {
+function formatTime_[#STATION_ID#](seconds) {
   let m = Math.floor(seconds / 60);
   let s = Math.floor(seconds % 60);
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-function allowBtn(btn, value) {
+function allowBtn_[#STATION_ID#](btn, value) {
   $('#' + btn).toggle(value);
 }
 
-function control(action, station) {
+// Enter и Space активируют иконку-кнопку так же, как клик
+$(document).ready(function () {
+  $('#btn_[#STATION_ID#]').on('keydown', '[role=button]', function (e) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      $(this).trigger('click');
+    }
+  });
+});
+
+function control_[#STATION_ID#](action, station) {
   if(action == 'play' && !on_[#STATION_ID#]){
 	    action = 'turnOn';
   }
@@ -124,7 +135,7 @@ function control(action, station) {
     success: function () {
 	  if(!isPlaying_[#STATION_ID#]){
 	    if(action == 'volumeUp' || action == 'volumeDown'){
-	        load(station);
+	        load_[#STATION_ID#](station);
         }
 	  }
     }
@@ -172,46 +183,46 @@ function control(action, station) {
           text-overflow: ellipsis; 
           white-space: nowrap; 
           text-align: right;">
-          [#if TITLE==''#]Управление музыкой[#else#][#TITLE#][#endif#]
+          Управление музыкой
         </div>
         <div style="font-size: 1.3rem; color: rgba(255,255,255,0.85); display: flex; justify-content: flex-end; gap: 4px; font-weight: 500; text-align: right; margin-top: 8px;">
           <span id="trackCurrent_[#STATION_ID#]" style="min-width: 30px; color: [#TEXTCOLOR#]; text-align: center;">00:00</span>
-          <span color: [#TEXTCOLOR#]>/</span>
+          <span style="color: [#TEXTCOLOR#];">/</span>
           <span id="trackDuration_[#STATION_ID#]" style="min-width: 30px; color: [#TEXTCOLOR#]; text-align: center;">00:00</span>
           
           <span id="volume_[#STATION_ID#]" style="font-weight: 500; font-size: 1.3rem; width: 30px; color: [#TEXTCOLOR#]; user-select:none; margin-top: 0px">[#VOLUME#]</span>
         </div>
 
-      <div id="btn" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 8px; flex-wrap: nowrap;">
-  <i id="hasPrev_[#STATION_ID#]" class="glyphicon glyphicon-fast-backward" title="Предыдущий"
+      <div id="btn_[#STATION_ID#]" style="display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 8px; flex-wrap: nowrap;">
+  <i id="hasPrev_[#STATION_ID#]" class="glyphicon glyphicon-fast-backward" title="Предыдущий" role="button" tabindex="0" aria-label="Предыдущий трек"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('prev', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('prev', [#STATION_ID#]); "></i>
 
-  <i id="hasPlay_[#STATION_ID#]" class="glyphicon glyphicon-play" title="Воспроизвести"
+  <i id="hasPlay_[#STATION_ID#]" class="glyphicon glyphicon-play" title="Воспроизвести" role="button" tabindex="0" aria-label="Воспроизвести"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('play', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('play', [#STATION_ID#]); "></i>
 
-  <i id="hasPause_[#STATION_ID#]" class="glyphicon glyphicon-pause" title="Пауза"
+  <i id="hasPause_[#STATION_ID#]" class="glyphicon glyphicon-pause" title="Пауза" role="button" tabindex="0" aria-label="Пауза"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('stop', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('stop', [#STATION_ID#]); "></i>
 
-  <i id="hasNext_[#STATION_ID#]" class="glyphicon glyphicon-fast-forward" title="Следующий"
+  <i id="hasNext_[#STATION_ID#]" class="glyphicon glyphicon-fast-forward" title="Следующий" role="button" tabindex="0" aria-label="Следующий трек"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('next', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('next', [#STATION_ID#]); "></i>
 
-  <i class="glyphicon glyphicon-volume-down" title="Уменьшить громкость"
+  <i class="glyphicon glyphicon-volume-down" title="Уменьшить громкость" role="button" tabindex="0" aria-label="Уменьшить громкость"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('volumeDown', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('volumeDown', [#STATION_ID#]); "></i>
 
-  <i class="glyphicon glyphicon-volume-up" title="Увеличить громкость"
+  <i class="glyphicon glyphicon-volume-up" title="Увеличить громкость" role="button" tabindex="0" aria-label="Увеличить громкость"
      style="font-size: 2.8rem; cursor: pointer; color: [#TEXTCOLOR#]; transition: color 0.3s; line-height: 1; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; user-select: none;"
      onmouseover="this.style.color=' #8bdca7';" onmouseout="this.style.color='[#TEXTCOLOR#]';"
-     onclick="control('volumeUp', [#STATION_ID#]); "></i>
+     onclick="control_[#STATION_ID#]('volumeUp', [#STATION_ID#]); "></i>
 </div>
 </div>
 
