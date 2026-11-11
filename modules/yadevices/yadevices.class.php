@@ -1211,7 +1211,7 @@ class yadevices extends module
             $message = $details['message'];
 
             // TTS LOCAL & CLOUD
-            $qry = "TTS=1 OR TTS=2 AND IOT_ID!=''";
+            $qry = "(TTS=1 OR (TTS=2 AND IOT_ID!=''))";
             if (isset($details['destination'])) {
                 $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
