@@ -481,7 +481,7 @@ class yadevices extends module
 						SQLUpdate('yastations', $rec);
 					}
 					//Создадим Станцию
-					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $device['id'] . "'");
+					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 					if(empty($device_rec['ID'])) {
 						$device_rec['TITLE'] = $device['name'];
 						$device_rec['DEVICE_TYPE'] = str_replace('smart_speaker.yandex.', '', $device['type']);
@@ -501,8 +501,8 @@ class yadevices extends module
 							$device_rec['SKILL_ID'] = 'local';
 							$update_station = true;
 						}
-						if($device_rec['ROOM'] != $device['room_name']){
-							$device_rec['ROOM'] = $device['room_name'];
+						if($device_rec['ROOM'] != ($device['room_name'] ?? '')){
+								$device_rec['ROOM'] = $device['room_name'] ?? '';
 							$update_station = true;
 						}
 						if($update_station){
@@ -548,7 +548,7 @@ class yadevices extends module
 					$iot_ids[] = $device['id'];
 				//Если другое устройство
 				} else {
-					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . $device['id'] . "'");
+					$device_rec = SQLSelectOne("SELECT * FROM yadevices WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 					$device_rec['TITLE'] = $device['name'];
 					$device_rec['DEVICE_TYPE'] = $device['type'];
 					$device_rec['HOUSE'] = $house['name'];
@@ -682,12 +682,18 @@ class yadevices extends module
 				}
 			}
 		}
+        //Защита от массового удаления (и отвязки свойств) при пустом/неполном ответе
+		if (empty($iot_ids)) {
+			$this->writeLog('Яндекс вернул пустой список устройств, удаление пропущено.', true);
+			$this->addScenarios();
+			return $data['updates_url'] ?? false;
+		}
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
 		//dprint($all_devices);
         $total = count($all_devices);
         for ($i = 0; $i < $total; $i++) {
             if (!in_array($all_devices[$i]['IOT_ID'], $iot_ids)) {
-				$this->writeLog('Устройство'.$all_devices[$i]['TITLE'].' удалено.');
+				$this->writeLog('Устройство '.$all_devices[$i]['TITLE'].' удалено.', true);
                 $this->delete_yadevice($all_devices[$i]['ID']);
             }
         }
