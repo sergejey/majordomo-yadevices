@@ -210,11 +210,12 @@ class yadevices extends module
 					$params['data'] = $params['data'].'^'.$params['volume'];
 				}
                 if ($params['command'] == 'setVolume') {
-					if(isset($params['volume'])){
-						$params['data'] = is_float($params['volume']) ? (float)$params['volume'] : (float)$params['volume'] * 0.1;
-					} else {
-						$params['data'] = (float)($params['data'] ?? 0) * 0.1;
-					}
+						//Через HTTP API всё приходит строкой, is_float() всегда false.
+						//Шкала 0..10; дробь с точкой <= 1 (0.5) считаем уже нормализованной 0..1
+						$raw = (string)($params['volume'] ?? $params['data']);
+						$vol = (float)str_replace(',', '.', $raw);
+						if (strpbrk($raw, '.,') === false || $vol > 1) $vol *= 0.1;
+						$params['data'] = max(0, min(1, $vol));
 				} else if($params['command'] == 'volumeUp' or $params['command'] == 'volumeDown'){
 					$params['data'] = $params['command'];
 				} else if (isset($params['say'])) { //для обратной совместимости
@@ -371,23 +372,19 @@ class yadevices extends module
 						continue;
 					}
 					//добавим статус в массив для дальнейшей обработки
-					if (isset($device['state']) && $device['state'] == 'online') {
-						$currentStatus = 1;
-					} else {
-						$currentStatus = 0;
-					}
-					$onlineArray = [
-						'type' => 'devices',
-						'state' => [
-							'value' => $currentStatus,
-						],
-						'parameters' => [
-							'instance' => 'online',
-						],
-					];
-					$device["properties"][] = $onlineArray;
-					//Циклом пройдемся по всем умениям
-					if (isset($device["capabilities"]) and is_array($device["capabilities"])) {
+					//В update_states поле state приходит не всегда: без него статус online не трогаем
+						$currentStatus = '';
+						if (isset($device['state'])) {
+							$currentStatus = $device['state'] == 'online' ? 1 : 0;
+							$device["properties"][] = [
+								'type' => 'devices',
+								'state' => ['value' => $currentStatus],
+								'parameters' => ['instance' => 'online'],
+							];
+						}
+						
+						//Циклом пройдемся по всем умениям
+						if (isset($device["capabilities"]) and is_array($device["capabilities"])) {
 						foreach ($device["capabilities"] as $capabilitie) {
 							if ($capabilitie['type'] == 'devices.capabilities.quasar.server_action') {
 								$c_type = 'cloud.aswr_scenario';
@@ -414,7 +411,7 @@ class yadevices extends module
 								continue;
 							}
 							//Основные умения, меняем значение
-							$value = '?';
+								$value = null;
 							if (isset($capabilitie['state']['value'])){
 								if(is_bool($capabilitie['state']['value']) == true) {
 									if ($capabilitie['state']['value'] == true) {
@@ -426,13 +423,17 @@ class yadevices extends module
 									$value = $this->flattenValue($capabilitie['state']['value']);
 								}  
 							}
-							//Ответы на сценарии обновляем всегда
+							//Нет значения в сообщении — нечего обновлять (раньше в свойство писался '?')
+								if ($value === null) continue;
+								//Ответы на сценарии обновляем всегда
 							if ($c_type == 'cloud.aswr_scenario' or $value != $req_skills['VALUE']) {
 								$params = array();
+								$station = SQLSelectOne("SELECT ID FROM yastations WHERE IOT_ID='" . DBSafe($device['id']) . "'");
 								$params['NEW_VALUE'] = $value;
-								$params['OLD_VALUE'] = $req_skills['VALUE'];
+								$params['OLD_VALUE'] = $req_skills['VALUE'] ?? '';
+								$params['STATION_ID'] = $station['ID'] ?? '';
 								$params['DEVICE_STATE'] = $currentStatus;
-								$params['ALLOWPARAMS'] = $req_skills['ALLOWPARAMS'];
+								$params['ALLOWPARAMS'] = $req_skills['ALLOWPARAMS'] ?? '';
 								$params['UPDATED'] = date('Y-m-d H:i:s');
 								$params['MODULE'] = $this->name;
 								$this->setProperty($req_skills, $value, $params, $c_type);
@@ -604,7 +605,8 @@ class yadevices extends module
 					//Циклом пройдемся по всем умениям
 					if(isset($device["capabilities"]) and is_array($device["capabilities"])) {
 						foreach($device["capabilities"] as $capabilitie) {
-							if($capabilitie['type'] == 'devices.capabilities.on_off') {
+								$value = null; //иначе значение «протекает» из предыдущего умения
+								if($capabilitie['type'] == 'devices.capabilities.on_off') {
 								$c_type = $capabilitie['type'];
 							} else {
 								if(isset($capabilitie['state']['instance']) && $capabilitie['state']['instance']) {
@@ -639,6 +641,10 @@ class yadevices extends module
 							if($allowparam !== '') {
 								$c_rec['ALLOWPARAMS'] = $allowparam;
 							}
+							//Изменения, пришедшие при полном опросе (старт цикла, переподключение), тоже передаем в привязки
+							if (!empty($c_rec['ID']) && (string)$c_rec['VALUE'] !== (string)$value) {
+								$this->setProperty($c_rec, $value, ['NEW_VALUE' => $value, 'OLD_VALUE' => $c_rec['VALUE'], 'UPDATED' => date('Y-m-d H:i:s'), 'MODULE' => $this->name], $c_type);
+							}
 							$c_rec['VALUE'] = $value;
 							$c_rec['YADEVICE_ID'] = $device_rec['ID'];
 							$c_rec['TITLE'] = $c_type;
@@ -653,8 +659,9 @@ class yadevices extends module
 							}
 						}
 					}
-					//Значения датчиков
-					if(isset($device["properties"]) and is_array($device["properties"])) {
+					//Значения датчиков (+ статус online, в т.ч. для устройств без датчиков: лампы, розетки)
+						if(!isset($device["properties"]) || !is_array($device["properties"])) $device["properties"] = [];
+						if(isset($device["properties"]) and is_array($device["properties"])) {
 						//Запихнем еще наш статус в массив
 						$onlineArray = [
 							'type' => 'devices.online',
@@ -673,6 +680,9 @@ class yadevices extends module
 				
 							//Запросим из БД текущие значения
 							$p_rec = SQLSelectOne("SELECT * FROM yadevices_capabilities WHERE YADEVICE_ID=" . (int)$device_rec['ID'] . " AND TITLE='" . DBSafe($p_type) . "'");
+							if (!empty($p_rec['ID']) && (string)$p_rec['VALUE'] !== (string)$value) {
+								$this->setProperty($p_rec, $value, ['NEW_VALUE' => $value, 'OLD_VALUE' => $p_rec['VALUE'], 'UPDATED' => date('Y-m-d H:i:s'), 'MODULE' => $this->name], $p_type);
+							}
 							$p_rec['VALUE'] = $value;
 							$p_rec['UPDATED'] = date('Y-m-d H:i:s');
 							$p_rec['YADEVICE_ID'] = $device_rec['ID'];
@@ -690,12 +700,18 @@ class yadevices extends module
 				}
 			}
 		}
+        //Защита от массового удаления (и отвязки свойств) при пустом/неполном ответе
+		if (empty($iot_ids)) {
+			$this->writeLog('Яндекс вернул пустой список устройств, удаление пропущено.', true);
+			$this->addScenarios();
+			return $data['updates_url'] ?? false;
+		}
         $all_devices = SQLSelect("SELECT ID, IOT_ID, TITLE FROM yadevices WHERE IOT_ID!=''");
 		//dprint($all_devices);
         $total = count($all_devices);
         for ($i = 0; $i < $total; $i++) {
             if (!in_array($all_devices[$i]['IOT_ID'], $iot_ids)) {
-				$this->writeLog('Устройство'.$all_devices[$i]['TITLE'].' удалено.');
+				$this->writeLog('Устройство '.$all_devices[$i]['TITLE'].' удалено.', true);
                 $this->delete_yadevice($all_devices[$i]['ID']);
             }
         }
@@ -893,7 +909,7 @@ class yadevices extends module
             foreach ($items as $item) {
 				//Исключаем приложения на телефоне и ТВ
 				$itemPlatform = $item['platform'] ?? '';
-				if($itemPlatform == 'alice_app_ios' or $itemPlatform == 'iot_app_ios' or $itemPlatform == 'iot_app_android' or $itemPlatform == 'yandex_tv_mt6681_cv') continue;
+				if($itemPlatform == 'alice_app_ios' or $itemPlatform == 'iot_app_ios' or $itemPlatform == 'iot_app_android' or $itemPlatform == 'yandex_tv_mt6681_cv' or $itemPlatform == 'navi_maps_ios' or $itemPlatform == 'navi_maps') continue;
 				if(empty($item['id'])) continue;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . DBSafe($item['id']) . "'");
                 if (empty($rec['ID'])) continue;
@@ -1336,7 +1352,7 @@ class yadevices extends module
             $message = $details['message'] ?? '';
 
             // TTS LOCAL & CLOUD
-            $qry = "TTS=1 OR TTS=2 AND IOT_ID!=''";
+            $qry = "(TTS=1 OR (TTS=2 AND IOT_ID!=''))";
             if (!empty($details['destination'])) {
                 $qry .= " AND yastations.TITLE LIKE '%" . DBSafe($details['destination']) . "%'";
             }
@@ -1602,8 +1618,8 @@ EOD;
     {
         $debug = 0;
 
-        if ($method != 'GET' && !isset($this->csrf_token)) {
-            $token = $this->getToken();
+        if ($method != 'GET' && empty($this->csrf_token)) {
+            $this->getToken();
         }
 
         $YaCurl = curl_init();
@@ -1634,29 +1650,33 @@ EOD;
         $info = curl_getinfo($YaCurl);
         curl_close($YaCurl);
 		if(($info['http_code'] ?? 0) == 401){
-			$this->getConfig();
-			if(!empty($this->config['AUTHORIZED'])){
-				if(file_exists(YADEVICES_COOKIE_PATH.'_back')){
+				$this->getConfig();
+				$wasAuthorized = !empty($this->config['AUTHORIZED']);
+				//Сначала фиксируем потерю авторизации: защита от бесконечной рекурсии
+				//(бэкап тоже протух) и от петли say() -> SAY -> облачный TTS -> 401 -> say()
+				$this->config['AUTHORIZED'] = 0;
+				$this->saveConfig();
+				if($wasAuthorized && !$repeating && file_exists(YADEVICES_COOKIE_PATH.'_back')){
 					copy(YADEVICES_COOKIE_PATH.'_back', YADEVICES_COOKIE_PATH);
-					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios');
-					if (!is_array($checkCookie) || ($checkCookie['status'] ?? '') != 'ok') {
-						@unlink(YADEVICES_COOKIE_PATH);
-						@unlink(YADEVICES_COOKIE_PATH.'_back');
-						$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
-					} else {
+					$checkCookie = $this->apiRequest('https://iot.quasar.yandex.ru/m/user/scenarios', 'GET', 0, 1);
+					if (is_array($checkCookie) && ($checkCookie['status'] ?? '') == 'ok') {
+						$this->config['AUTHORIZED'] = 1;
+						$this->saveConfig();
 						$this->writeLog('Автоматическая авторизация из бэкапа успешна!', true);
-						return $this->apiRequest($url, $method, $params, $repeating);
+						return $this->apiRequest($url, $method, $params, 1);
+					}
+					@unlink(YADEVICES_COOKIE_PATH);
+					@unlink(YADEVICES_COOKIE_PATH.'_back');
+					$this->writeLog('Ошибка автоматической авторизации из бэкапа, необходима ручная авторизация', true);
+				}
+				if($wasAuthorized){
+					say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
+					if(method_exists($this, 'sendnotification')) {
+						$this->sendnotification('Авторизация отсутствует', 'warning');
 					}
 				}
-				say("В модуле Yadevices отсутствует авторизация", gg('ThisComputer.minMsgLevel'));
-				if(method_exists($this, 'sendnotification')) {
-					$this->sendnotification('Авторизация отсутствует', 'warning ');
-				}
+				return 'Unauthorized';
 			}
-			$this->config['AUTHORIZED'] = 0;
-			$this->saveConfig();
-			return 'Unauthorized';
-		}
         $request_headers = $info['request_header'] ?? '';
         if ($debug) {
             dprint("REQUEST HEADERS:",false);
@@ -1670,7 +1690,7 @@ EOD;
         }
         if (!$repeating &&
             (!isset($data['code']) || $data['code']!= 'BAD_REQUEST') &&   
-            ($result_code==403 || (isset($data['status']) && $data['status'] == 'error'))
+            ($result_code==403 || ($method == 'GET' && isset($data['status']) && $data['status'] == 'error'))
         ) {
             if ($debug) {
                 dprint("REPEATING: ".$method." ".$url,false);

@@ -145,6 +145,8 @@ class WebSocketServer extends WssMain implements WebSocketServerContract
             }
 
             //start reading and use a large timeout
+            $write = null;
+            $except = null;
             if (!stream_select($readSocks, $write, $except, $this->config->getStreamSelectTimeout())) {
                 throw new WebSocketException('something went wrong while selecting',
                     CommonsContract::SERVER_SELECT_ERROR);
@@ -199,8 +201,12 @@ class WebSocketServer extends WssMain implements WebSocketServerContract
         foreach ($readSocks as $kSock => $sock) {
             $data = $this->decode(fread($sock, self::MAX_BYTES_READ));
             if ($data !== null) {
-                $dataType = $data['type'];
-                $dataPayload = $data['payload'];
+                $dataType = null;
+                $dataPayload = null;
+                if ($data !== false) { // кадр пришёл не целиком - ждём остаток
+                    $dataType = $data['type'];
+                    $dataPayload = $data['payload'];
+                }
 
                 // to manipulate connection through send/close methods via handler, specified in IConnection
                 $this->cureentConn = new Connection($sock, $this->clients);
@@ -217,7 +223,9 @@ class WebSocketServer extends WssMain implements WebSocketServerContract
                     continue;
                 }
 
-                if (method_exists($this->handler, self::MAP_EVENT_TYPE_TO_METHODS[$dataType])) {
+                $isSupportedMethod = empty(self::MAP_EVENT_TYPE_TO_METHODS[$dataType]) === false
+                    && method_exists($this->handler, self::MAP_EVENT_TYPE_TO_METHODS[$dataType]);
+                if ($isSupportedMethod) {
                     try {
                         // dynamic call: onMessage, onPing, onPong
                         $this->handler->{self::MAP_EVENT_TYPE_TO_METHODS[$dataType]}($this->cureentConn, $dataPayload);
@@ -242,7 +250,7 @@ class WebSocketServer extends WssMain implements WebSocketServerContract
         $match = [];
         preg_match(self::SEC_WEBSOCKET_KEY_PTRN, $headers, $match);
         if (empty($match[1])) {
-            return false;
+            return '';
         }
 
         $key = $match[1];
@@ -306,7 +314,9 @@ class WebSocketServer extends WssMain implements WebSocketServerContract
     {
         if (empty($this->handler->pathParams) === false) {
             $matches = [];
-            preg_match('/GET\s(.*?)\s/', $headers, $matches);
+            if (!preg_match('/GET\s(.*?)\s/', $headers, $matches)) {
+                return;
+            }
             $left = $matches[1];
 
             foreach ($this->handler->pathParams as $k => $param) {

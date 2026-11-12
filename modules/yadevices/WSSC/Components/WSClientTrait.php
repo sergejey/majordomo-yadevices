@@ -20,7 +20,7 @@ trait WSClientTrait
      */
     private function validateResponse(ClientConfig $config, string $pathWithQuery, string $key)
     {
-        $response = stream_get_line($this->socket, self::DEFAULT_RESPONSE_HEADER, "\r\n\r\n");
+        $response = (string)stream_get_line($this->socket, self::DEFAULT_RESPONSE_HEADER, "\r\n\r\n");
         if (!preg_match(self::SEC_WEBSOCKET_ACCEPT_PTTRN, $response, $matches)) {
             $address = $config->getScheme() . '://' . $config->getHost() . ':' . $config->getPort() . $pathWithQuery;
             throw new ConnectionException(
@@ -73,7 +73,18 @@ trait WSClientTrait
             $payloadLength = bindec(self::sprintB($data));
         }
 
-        return $payloadLength;
+        // Заявленная длина кадра приходит из сети и ничем не ограничена.
+        // Без этой проверки битый или враждебный кадр заставляет read() набирать
+        // строку заявленного размера: процесс растёт, пока его не убьёт ядро (сигнал 9).
+        // Станции Яндекс отправляют кадры на порядки меньше предела.
+        if ($payloadLength > self::MAX_FRAME_LENGTH) {
+            throw new ConnectionException(
+                'Frame payload too large: ' . $payloadLength . ' bytes (limit ' . self::MAX_FRAME_LENGTH . ').',
+                CommonsContract::CLIENT_BROKEN_FRAME
+            );
+        }
+
+        return (int)$payloadLength;
     }
 
     /**
@@ -177,7 +188,7 @@ trait WSClientTrait
 
         if ($this->hugePayload) {
             $payload = $this->hugePayload .= $payload;
-            $this->hugePayload = NULL;
+            $this->hugePayload = '';
         }
 
         return $payload;
