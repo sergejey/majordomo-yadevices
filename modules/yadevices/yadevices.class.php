@@ -886,7 +886,7 @@ class yadevices extends module
             $items = $data['items'];
             foreach ($items as $item) {
 				//Исключаем приложения на телефоне и ТВ
-				if($item['platform'] == 'alice_app_ios' or $item['platform'] == 'iot_app_ios' or $item['platform'] == 'iot_app_android' or $item['platform'] == 'yandex_tv_mt6681_cv') continue;
+				if($item['platform'] == 'alice_app_ios' or $item['platform'] == 'iot_app_ios' or $item['platform'] == 'iot_app_android' or $item['platform'] == 'yandex_tv_mt6681_cv' or $item['platform'] == 'navi_maps_ios' or $item['platform'] == 'navi_maps') continue;
                 $rec = SQLSelectOne("SELECT * FROM yastations WHERE STATION_ID='" . $item['id'] . "'");
                 $rec['UPDATED'] = date('Y-m-d H:i:s');
                 /*$rec['OWNER'] = $this->config['API_USERNAME'];
