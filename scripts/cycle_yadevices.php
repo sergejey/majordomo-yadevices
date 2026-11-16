@@ -8,6 +8,12 @@ include_once("./lib/threads.php");
 set_time_limit(0);
 
 const RECONNECT_TIME = 60;
+// Очередь голосовых фраз (команда text): станция обрывает текущую речь новой командой,
+// поэтому следующая фраза уходит только после того, как предыдущая договорена
+const TTS_START_WAIT = 4;   // сек ждём начала речи, иначе считаем фразу завершённой
+const TTS_MAX_WAIT = 60;    // сек предельное ожидание одной фразы
+const TTS_QUEUE_TTL = 120;  // сек жизни фразы в очереди
+const TTS_QUEUE_MAX = 20;   // максимум фраз в очереди станции
 
 include_once("./load_settings.php");
 include_once(DIR_MODULES . "control_modules/control_modules.class.php");
@@ -139,6 +145,12 @@ while(true) {
 									}
 								}
 								$state = $response_arr['state'];
+								//Очередь фраз: фраза договорена, когда Станция начала говорить и перестала
+								if(isset($stations[$key]['TTS_STATE'])){
+									$aliceState = (string)($state['aliceState'] ?? '');
+									if($aliceState == 'SPEAKING') $stations[$key]['TTS_STATE']['spoke'] = true;
+									else if(!empty($stations[$key]['TTS_STATE']['spoke'])) unset($stations[$key]['TTS_STATE']);
+								}
 								//Если прибавляли громкость, провераяем состояние Станции или убавляем по таймауту
 								if(isset($station['TVOLUME'])){
 									if((int)$station['TVOLUME']['start'] <= time()){
@@ -194,14 +206,42 @@ while(true) {
 	}
 	//Получаем команды для отправки на Станции
 	$operations = checkOperationsQueue('yadevices');
+	if(!is_array($operations)) $operations = array();
 	if(is_array($volRefresh)){
 		$operations[] = $volRefresh;
 		$volRefresh = '';
+	}
+	//Очередь фраз: следующая фраза Станции, если предыдущая договорена или вышло время ожидания
+	foreach($stations as $key => $station){
+		if(empty($station['TTS_QUEUE'])) continue;
+		if(isset($station['TTS_STATE'])){
+			$elapsed = microtime(true) - $station['TTS_STATE']['sent'];
+			if(empty($station['TTS_STATE']['spoke']) ? $elapsed < TTS_START_WAIT : $elapsed < $station['TTS_STATE']['max']) continue;
+			unset($stations[$key]['TTS_STATE']);
+		}
+		if(!isset($station['CONNECT'])) continue;
+		while(!empty($stations[$key]['TTS_QUEUE'])){
+			$item = array_shift($stations[$key]['TTS_QUEUE']);
+			if($item['time'] < time() - TTS_QUEUE_TTL){
+				echo date("H:i:s").' Фраза для '.$station['TITLE'].' устарела в очереди и пропущена: '.$item['value'].PHP_EOL;
+				continue;
+			}
+			$operations[] = ['DATANAME'=>$key, 'DATAVALUE'=>$item['raw'], 'FROM_TTS_QUEUE'=>1];
+			break;
+		}
 	}
 	for ($i=0; $i<count($operations); $i++) {
 		$station_id = $operations[$i]["DATANAME"];
 		if(!empty($station_id)){
 			if(isset($stations[$station_id]['CONNECT'])){
+				//Голосовые фразы - через очередь Станции, чтобы не обрывать текущую речь
+				$rawCommand = explode('^', (string)$operations[$i]["DATAVALUE"]);
+				if($rawCommand[0] == 'text' && empty($operations[$i]['FROM_TTS_QUEUE'])){
+					if(!isset($stations[$station_id]['TTS_QUEUE'])) $stations[$station_id]['TTS_QUEUE'] = [];
+					if(count($stations[$station_id]['TTS_QUEUE']) >= TTS_QUEUE_MAX) array_shift($stations[$station_id]['TTS_QUEUE']);
+					$stations[$station_id]['TTS_QUEUE'][] = ['raw'=>$operations[$i]["DATAVALUE"], 'value'=>$rawCommand[1] ?? '', 'time'=>time()];
+					continue;
+				}
 				if(stripos($operations[$i]["DATAVALUE"], '^')){
 					$data = explode('^', $operations[$i]["DATAVALUE"]);
 					$command = $data[0];
@@ -218,6 +258,10 @@ while(true) {
 				$id = uniqid('');
 				$stations[$station_id]['ANSWER'] = [$id=>['command'=>$command,'value'=>$value]];
 				if($command == 'playerState') $sendPlayerState = true;
+				if(!empty($operations[$i]['FROM_TTS_QUEUE'])){
+					$stations[$station_id]['TTS_STATE'] = ['sent'=>microtime(true), 'spoke'=>false,
+						'max'=>min(TTS_MAX_WAIT, 5 + 0.12 * mb_strlen((string)$value))];
+				}
 				$message = $yadevices->message($command, $value, $stations[$station_id]['DEVICE_TOKEN'], $id);
 				if($value != '') $value = ': '.$value;
 				echo date("H:i:s")." Отправляем на ".$stations[$station_id]['TITLE']." " . $command . $value.PHP_EOL;
