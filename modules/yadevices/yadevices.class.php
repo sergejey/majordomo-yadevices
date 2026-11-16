@@ -1365,7 +1365,15 @@ class yadevices extends module
                 if ($level >= $min_level) {
                     //$this->sendCloudTTS($station['IOT_ID'],$message);
 					//$this->sendCommandToStation($station, 'text', $message);
-                    callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
+                    if ((int)$station['TTS'] == 1 && !empty($station['DEVICE_TOKEN']) && !empty($station['IP'])
+                        && time() - (int)gg('cycle_yadevicesRun') < 16) {
+                        // Локальная Станция при работающем цикле: фраза сразу в очередь операций.
+                        // callAPI() в режиме «отправил и забыл» обрабатывает несколько say() подряд
+                        // параллельно, и фразы могут попасть в очередь не в том порядке
+                        $this->sendCommandToStation($station, 'text', $message);
+                    } else {
+                        callAPI('/api/module/yadevices', 'GET', array('station' => $station['ID'], 'command' => 'text', 'data' => $message));
+                    }
                 }
             }
         }
