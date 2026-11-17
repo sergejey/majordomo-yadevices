@@ -10,10 +10,12 @@ if ($this->mode == 'switch') {
 }
 
 //Добавим иконки из БД
-include_once "utils/devices_url.php";
+$devices_URL = array();
+include_once DIR_MODULES . "yadevices/utils/devices_url.php";
 $devices = SQLSelect("SELECT * FROM yadevices ORDER BY TITLE");
 //$devices = SQLSelect("SELECT yadevices.*, yadevices_capabilities.VALUE FROM yadevices LEFT JOIN yadevices_capabilities ON yadevices.ID=yadevices_capabilities.YADEVICE_ID WHERE yadevices_capabilities.TITLE = 'devices.capabilities.on_off' ORDER BY TITLE");
 $properties_temp = SQLSelect("SELECT * FROM yadevices_capabilities");
+$properties = array();
 //Если есть статус включения, добавим его значение в отдельный массив
 foreach($properties_temp as $prop){
 	if($prop['TITLE'] == 'devices.capabilities.on_off' or $prop['TITLE']=='local.online' and $prop['VALUE'] == 1){
@@ -22,6 +24,7 @@ foreach($properties_temp as $prop){
 }
 unset($properties_temp);
 foreach($devices as $key=>$device){
+	$devices[$key]['TITLE'] = htmlspecialchars((string)$device['TITLE']);
 	$on = '';
 	if(isset($properties[$device['ID']])){
 		$devices[$key]["VALUE"] = 0;
@@ -30,9 +33,9 @@ foreach($devices as $key=>$device){
 			$devices[$key]["VALUE"] = 1;
 		}
 	}
-	if(stripos($device['DEVICE_TYPE'], 'devices.types.station') !== false) unset($devices[$key]["VALUE"]);
+	if(stripos((string)$device['DEVICE_TYPE'], 'devices.types.station') !== false) unset($devices[$key]["VALUE"]);
 	$devices[$key]["ICON"] = $devices_URL[$device['DEVICE_TYPE'].$on] ?? 'https://yastatic.net/s3/pudya/app/_/cf97acc6d0252b23.webp';
 }
-if ($devices[0]['ID']) {
+if (!empty($devices)) {
     $out['RESULT'] = $devices;
 }
