@@ -238,7 +238,7 @@ while(true) {
 	}
 	if (file_exists('./reboot') || isset($_GET['onetime'])) {
 		foreach($stations as $station){
-			$station['CONNECT']->close();
+			if (isset($station['CONNECT'])) $station['CONNECT']->close();
 		}
 		exit;
 	}
