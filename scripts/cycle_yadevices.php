@@ -8,7 +8,6 @@ include_once("./lib/threads.php");
 set_time_limit(0);
 
 const RECONNECT_TIME = 60;
-const QUEUE_CHECK_INTERVAL = 0.5; // seconds between operations_queue polls
 
 include_once("./load_settings.php");
 include_once(DIR_MODULES . "control_modules/control_modules.class.php");
@@ -28,7 +27,6 @@ $yadevices = new yadevices();
 
 $latest_check_cycle = 0;
 $latest_check = 0;
-$latest_queue_check = 0;
 $sendPlayerState = false;
 $volRefresh = '';
 
@@ -195,11 +193,7 @@ while(true) {
 		}
 	}
 	//Получаем команды для отправки на Станции
-	$operations = [];
-	if (microtime(true) - $latest_queue_check >= QUEUE_CHECK_INTERVAL) {
-		$latest_queue_check = microtime(true);
-		$operations = checkOperationsQueue('yadevices');
-	}
+	$operations = checkOperationsQueue('yadevices');
 	if(is_array($volRefresh)){
 		$operations[] = $volRefresh;
 		$volRefresh = '';
